@@ -3,7 +3,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { LessonPlan } from "@/types/lesson-plan";
 import { learningAreaLabel } from "@/data/curriculum";
-import { ASSESSMENT_DESCRIPTION, LEARNING_EXPERIENCE_DESCRIPTION } from "@/data/lesson-plan-copy";
+import { ASSESSMENT_DESCRIPTION, LEARNING_EXPERIENCE_DESCRIPTION, lessonNameWithWeek } from "@/data/lesson-plan-copy";
 
 const dayValues = <T,>(plan: LessonPlan, getter: (index: number) => T) => Array.from({ length: 4 }, (_, index) => index < plan.sessions.length ? getter(index) : ("" as T));
 const text = (value: unknown) => String(value ?? "");
@@ -14,7 +14,7 @@ function merged(content: string): ExportCell { return { content, colSpan: 4 }; }
 
 function rows(plan: LessonPlan): Array<[string, ...ExportCell[]]> {
   return [
-    ["Name of Lesson", merged(plan.title)],
+    ["Name of Lesson", merged(lessonNameWithWeek(plan.title, plan.week))],
     ["Learning Area/s", merged(learningAreaLabel(plan.grade, plan.area))],
     ["Designed by Teacher/s", merged(plan.profile.teacherName)],
     ["Designed for which Grade Level and Section", merged(`GRADE ${plan.grade} - ${plan.section}`)],
