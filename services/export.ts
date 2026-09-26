@@ -3,31 +3,36 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { LessonPlan } from "@/types/lesson-plan";
 import { learningAreaLabel } from "@/data/curriculum";
+import { ASSESSMENT_DESCRIPTION, LEARNING_EXPERIENCE_DESCRIPTION } from "@/data/lesson-plan-copy";
 
 const dayValues = <T,>(plan: LessonPlan, getter: (index: number) => T) => Array.from({ length: 4 }, (_, index) => index < plan.sessions.length ? getter(index) : ("" as T));
 const text = (value: unknown) => String(value ?? "");
 
-function rows(plan: LessonPlan): Array<[string, ...string[]]> {
+type ExportCell = string | { content: string; colSpan: number };
+
+function merged(content: string): ExportCell { return { content, colSpan: 4 }; }
+
+function rows(plan: LessonPlan): Array<[string, ...ExportCell[]]> {
   return [
-    ["Name of Lesson", ...dayValues(plan, () => plan.title)],
-    ["Learning Area/s", ...dayValues(plan, () => learningAreaLabel(plan.grade, plan.area))],
-    ["Designed by Teacher/s", ...dayValues(plan, () => plan.profile.teacherName)],
-    ["Designed for which Grade Level and Section", ...dayValues(plan, () => `GRADE ${plan.grade} - ${plan.section}`)],
+    ["Name of Lesson", merged(plan.title)],
+    ["Learning Area/s", merged(learningAreaLabel(plan.grade, plan.area))],
+    ["Designed by Teacher/s", merged(plan.profile.teacherName)],
+    ["Designed for which Grade Level and Section", merged(`GRADE ${plan.grade} - ${plan.section}`)],
     ["No. of Sessions", ...dayValues(plan, (i) => `SESSION ${i + 1}`)],
-    ["References", ...dayValues(plan, () => plan.references)],
-    ["Declaration of AI use", ...dayValues(plan, () => plan.aiDeclaration)],
-    ["INTENTIONS", ...dayValues(plan, () => "Meaningful learning experiences are anchored in clear, relevant intentions.")],
+    ["References", merged(plan.references)],
+    ["Declaration of AI use", merged(plan.aiDeclaration)],
+    ["INTENTIONS", merged("Meaningful learning experiences are anchored in clear, relevant intentions.")],
     ["Learning Competency", ...dayValues(plan, () => plan.competencyText)],
     ["Learning Objectives", ...dayValues(plan, (i) => plan.sessions[i].objectives.join("\n"))],
     ["Learner Context", ...dayValues(plan, (i) => plan.sessions[i].learnerContext)],
-    ["LEARNING EXPERIENCE", ...dayValues(plan, () => "A purposeful sequence of activities builds understanding and growth.")],
+    ["LEARNING EXPERIENCE", merged(LEARNING_EXPERIENCE_DESCRIPTION)],
     ["Pre-Lesson", ...dayValues(plan, (i) => plan.sessions[i].preLesson)],
     ["Flow", ...dayValues(plan, (i) => `I DO: ${plan.sessions[i].flow.iDo}\n\nWE DO: ${plan.sessions[i].flow.weDo}\n\nYOU DO: ${plan.sessions[i].flow.youDo}\n\nSYNTHESIS: ${plan.sessions[i].flow.synthesis}`)],
     ["Learning Resources", ...dayValues(plan, (i) => plan.sessions[i].resources.join(", "))],
     ["Opportunities for integration", ...dayValues(plan, (i) => plan.sessions[i].integration)],
-    ["ASSESSMENT", ...dayValues(plan, () => "Assessment evidence guides feedback and the next teaching move.")],
+    ["ASSESSMENT", merged(ASSESSMENT_DESCRIPTION)],
     ["Formative Assessment", ...dayValues(plan, (i) => plan.sessions[i].assessment)],
-    ["WAYS FORWARD", ...dayValues(plan, () => "Learning continues through reflection and realistic experiences beyond class.")],
+    ["WAYS FORWARD", merged("Learning continues through reflection and realistic experiences beyond class.")],
     ["Extended learning opportunities", ...dayValues(plan, (i) => plan.sessions[i].extendedLearning)],
     ["Reflections", ...dayValues(plan, (i) => plan.sessions[i].reflection)],
   ];
@@ -37,7 +42,18 @@ export async function exportDocx(plan: LessonPlan) {
   const border = { style: BorderStyle.SINGLE, size: 4, color: "64748B" };
   const tableRows = [
     new TableRow({ children: ["", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY"].map((item) => new TableCell({ borders: { top:border,bottom:border,left:border,right:border }, shading: { fill: item ? "DDE8F8" : "FFFFFF" }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: item, bold: true, size: 16 })] })] })) }),
-    ...rows(plan).map((row) => new TableRow({ cantSplit: true, children: row.map((item, index) => new TableCell({ borders: { top:border,bottom:border,left:border,right:border }, shading: index === 0 ? { fill: "EEF3F9" } : undefined, children: text(item).split("\n").map((line) => new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: line, bold: index === 0, size: 15 })] })) })) })),
+    ...rows(plan).map((row) => new TableRow({
+      cantSplit: true,
+      children: row.map((item, index) => {
+        const value = typeof item === "string" ? item : item.content;
+        return new TableCell({
+          columnSpan: typeof item === "string" ? undefined : item.colSpan,
+          borders: { top:border,bottom:border,left:border,right:border },
+          shading: index === 0 ? { fill: "EEF3F9" } : undefined,
+          children: text(value).split("\n").map((line) => new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: line, bold: index === 0, size: 15 })] })),
+        });
+      }),
+    })),
   ];
   const doc = new Document({ sections: [{ properties: { page: { size: { orientation: PageOrientation.LANDSCAPE }, margin: { top: 280, right: 280, bottom: 280, left: 280 } } }, children: [
     new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Republic of the Philippines", size: 18 })] }),
