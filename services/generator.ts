@@ -28,10 +28,19 @@ function focusText(text: string) {
   return text.replace(/^(Discuss|Identify|Determine|Explain|Perform|Apply|Recognize|Differentiate|Distinguish|Examine|Create|Develop|Interpret|Demonstrate|Familiarize themselves with)\s+/i, "").replace(/\.$/, "");
 }
 
+function lessonNameFromCompetency(competency: Competency | undefined) {
+  if (!competency) return "Lesson based on the selected learning competency";
+  const source = competency.strand?.trim() || focusText(competency.text);
+  const clean = source.replace(/[.;:,]+$/, "").replace(/\s+/g, " ").trim();
+  const words = clean.split(" ");
+  const concise = words.length > 16 ? `${words.slice(0, 16).join(" ")}…` : clean;
+  return concise.charAt(0).toUpperCase() + concise.slice(1);
+}
+
 export function generateLessonPlan(input: Input): LessonPlan {
   const competencyText = input.competencies.map((item) => item.text).join("\n");
-  const focus = focusText(input.competencies[0]?.text || input.topic);
-  const title = input.topic.trim() || focus.replace(/^./, (letter) => letter.toUpperCase());
+  const focus = input.topic.trim() || focusText(input.competencies[0]?.text || "the selected competency");
+  const title = lessonNameFromCompetency(input.competencies[0]);
   const resources = input.availableResources.trim()
     ? input.availableResources.split(",").map((item) => item.trim()).filter(Boolean)
     : ["PowerPoint or printed visual aids", "activity sheets", "picture/word cards", "available real objects or tools"];
