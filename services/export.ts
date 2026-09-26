@@ -1,4 +1,4 @@
-import { AlignmentType, BorderStyle, Document, HeadingLevel, Packer, PageOrientation, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from "docx";
+import { AlignmentType, BorderStyle, Document, HeadingLevel, ImageRun, Packer, PageOrientation, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from "docx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { LessonPlan } from "@/types/lesson-plan";
@@ -39,6 +39,7 @@ function rows(plan: LessonPlan): Array<[string, ...ExportCell[]]> {
 }
 
 export async function exportDocx(plan: LessonPlan) {
+  const logoData = await fetch("/deped-seal.png").then((response) => response.arrayBuffer());
   const border = { style: BorderStyle.SINGLE, size: 4, color: "64748B" };
   const tableRows = [
     new TableRow({ children: ["", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY"].map((item) => new TableCell({ borders: { top:border,bottom:border,left:border,right:border }, shading: { fill: item ? "DDE8F8" : "FFFFFF" }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: item, bold: true, size: 16 })] })] })) }),
@@ -56,6 +57,7 @@ export async function exportDocx(plan: LessonPlan) {
     })),
   ];
   const doc = new Document({ sections: [{ properties: { page: { size: { orientation: PageOrientation.LANDSCAPE }, margin: { top: 280, right: 280, bottom: 280, left: 280 } } }, children: [
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new ImageRun({ data: logoData, transformation: { width: 54, height: 54 }, type: "png" })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "Republic of the Philippines", size: 18 })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "DEPARTMENT OF EDUCATION", bold: true, size: 20 })] }),
     ...[plan.profile.region, plan.profile.division, plan.profile.district, plan.profile.school, plan.profile.location].map((line) => new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: line, size: 17 })] })),
@@ -68,17 +70,20 @@ export async function exportDocx(plan: LessonPlan) {
   download(blob, `${safe(plan.title)}-ILAW.docx`);
 }
 
-export function exportPdf(plan: LessonPlan) {
+export async function exportPdf(plan: LessonPlan) {
   const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+  const logoData = await imageDataUrl("/deped-seal.png");
+  pdf.addImage(logoData, "PNG", 394, 12, 54, 54);
   pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
-  pdf.text("Republic of the Philippines", 421, 28, { align: "center" });
-  pdf.setFont("helvetica", "bold"); pdf.text("DEPARTMENT OF EDUCATION", 421, 41, { align: "center" });
-  pdf.setFont("helvetica", "normal"); pdf.text(`${plan.profile.region} | ${plan.profile.division} | ${plan.profile.district}`, 421, 54, { align: "center" });
-  pdf.text(`${plan.profile.school} - ${plan.profile.location}`, 421, 67, { align: "center" });
-  pdf.setFont("helvetica", "bold"); pdf.setFontSize(12); pdf.text("LESSON PLAN", 421, 84, { align: "center" });
-  autoTable(pdf, { startY: 94, head: [["", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY"]], body: rows(plan), theme: "grid", styles: { fontSize: 5.6, cellPadding: 2.4, valign: "top", lineColor: [100,116,139], lineWidth: .3 }, headStyles: { fillColor: [23,63,138], textColor: 255, halign: "center" }, columnStyles: { 0: { fillColor: [238,243,249], fontStyle: "bold", cellWidth: 106 } }, margin: { left: 16, right: 16 } });
+  pdf.text("Republic of the Philippines", 421, 76, { align: "center" });
+  pdf.setFont("helvetica", "bold"); pdf.text("DEPARTMENT OF EDUCATION", 421, 89, { align: "center" });
+  pdf.setFont("helvetica", "normal"); pdf.text(`${plan.profile.region} | ${plan.profile.division} | ${plan.profile.district}`, 421, 102, { align: "center" });
+  pdf.text(`${plan.profile.school} - ${plan.profile.location}`, 421, 115, { align: "center" });
+  pdf.setFont("helvetica", "bold"); pdf.setFontSize(12); pdf.text("LESSON PLAN", 421, 132, { align: "center" });
+  autoTable(pdf, { startY: 142, head: [["", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY"]], body: rows(plan), theme: "grid", styles: { fontSize: 5.6, cellPadding: 2.4, valign: "top", lineColor: [100,116,139], lineWidth: .3 }, headStyles: { fillColor: [23,63,138], textColor: 255, halign: "center" }, columnStyles: { 0: { fillColor: [238,243,249], fontStyle: "bold", cellWidth: 106 } }, margin: { left: 16, right: 16 } });
   pdf.save(`${safe(plan.title)}-ILAW.pdf`);
 }
 
 function safe(value: string) { return value.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, ""); }
 function download(blob: Blob, filename: string) { const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 500); }
+async function imageDataUrl(url: string) { const blob = await fetch(url).then((response) => response.blob()); return new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(blob); }); }
