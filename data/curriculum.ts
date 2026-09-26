@@ -75,3 +75,11 @@ export function termLabel(term: Term) {
 export function learningAreaLabel(grade: GradeLevel, area: LearningArea) {
   return area === "Good Manners and Right Conduct" ? `GMRC ${grade}` : `TLE ${grade} ${areaAbbreviation[area]}`;
 }
+
+export function learningAreaOptionLabel(area: LearningArea) {
+  if (area === "Good Manners and Right Conduct") return "GMRC";
+  if (area === "Information and Communications Technology") return "TLE – ICT";
+  if (area === "ICT - Computer Programming") return "TLE – ICT: Computer Programming";
+  if (area === "ICT - Computer Systems Servicing") return "TLE – ICT: Computer Systems Servicing";
+  return `TLE – ${area}`;
+}

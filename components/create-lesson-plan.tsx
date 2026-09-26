@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { Check, ChevronRight, Info, Sparkles } from "lucide-react";
-import { competencies, areaAbbreviation, termLabel } from "@/data/curriculum";
+import { competencies, areaAbbreviation, learningAreaOptionLabel, termLabel } from "@/data/curriculum";
 import { generateLessonPlan } from "@/services/generator";
 import { Competency, GradeLevel, LessonPlan, TeacherProfile, Term } from "@/types/lesson-plan";
 
@@ -18,29 +18,36 @@ export function CreateLessonPlan({ profile, onGenerated }: { profile: TeacherPro
   const [generating, setGenerating] = useState(false); const [error, setError] = useState("");
   const available = useMemo(() => competencies.filter((c) => c.grade === grade && c.term === term && c.weeks.includes(week) && c.area === area), [grade, term, week, area]);
   const selectedCompetencies = available.filter((c) => selected.includes(c.id));
-  const terms = Array.from(new Set(competencies.filter((c) => c.grade === grade).map((c) => c.term))).sort((a,b) => String(a).localeCompare(String(b)));
-  const weeks = Array.from(new Set(competencies.filter((c) => c.grade === grade && c.term === term).flatMap((c) => c.weeks))).sort((a,b) => a-b);
-  const areas = Array.from(new Set(competencies.filter((c) => c.grade === grade && c.term === term && c.weeks.includes(week)).map((c) => c.area)));
+  const areas = Array.from(new Set(competencies.filter((c) => c.grade === grade).map((c) => c.area)));
+  const terms = Array.from(new Set(competencies.filter((c) => c.grade === grade && c.area === area).map((c) => c.term))).sort((a,b) => String(a).localeCompare(String(b)));
+  const weeks = Array.from(new Set(competencies.filter((c) => c.grade === grade && c.area === area && c.term === term).flatMap((c) => c.weeks))).sort((a,b) => a-b);
 
   function changeGrade(nextGrade: GradeLevel) {
-    const nextTerms = Array.from(new Set(competencies.filter((c) => c.grade === nextGrade).map((c) => c.term))).sort((a,b) => String(a).localeCompare(String(b)));
-    const nextTerm = nextTerms[0];
-    const nextWeeks = Array.from(new Set(competencies.filter((c) => c.grade === nextGrade && c.term === nextTerm).flatMap((c) => c.weeks))).sort((a,b) => a-b);
-    const nextWeek = nextWeeks[0];
-    const nextArea = competencies.find((c) => c.grade === nextGrade && c.term === nextTerm && c.weeks.includes(nextWeek))?.area;
+    const first = competencies.find((c) => c.grade === nextGrade);
+    if (!first) return;
+    const nextArea = first.area;
+    const nextTerm = first.term;
+    const nextWeek = first.weeks[0];
     setGrade(nextGrade); setTerm(nextTerm); setWeek(nextWeek); if (nextArea) setArea(nextArea); setSelected([]);
   }
 
+  function changeArea(nextArea: Competency["area"]) {
+    const areaRows = competencies.filter((c) => c.grade === grade && c.area === nextArea);
+    const areaTerms = Array.from(new Set(areaRows.map((c) => c.term))).sort((a,b) => String(a).localeCompare(String(b)));
+    const nextTerm = areaTerms.includes(term) ? term : areaTerms[0];
+    const areaWeeks = Array.from(new Set(areaRows.filter((c) => c.term === nextTerm).flatMap((c) => c.weeks))).sort((a,b) => a-b);
+    const nextWeek = areaWeeks.includes(week) ? week : areaWeeks[0];
+    setArea(nextArea); setTerm(nextTerm); setWeek(nextWeek); setSelected([]);
+  }
+
   function changeTerm(nextTerm: Term) {
-    const nextWeeks = Array.from(new Set(competencies.filter((c) => c.grade === grade && c.term === nextTerm).flatMap((c) => c.weeks))).sort((a,b) => a-b);
+    const nextWeeks = Array.from(new Set(competencies.filter((c) => c.grade === grade && c.area === area && c.term === nextTerm).flatMap((c) => c.weeks))).sort((a,b) => a-b);
     const nextWeek = nextWeeks[0];
-    const nextArea = competencies.find((c) => c.grade === grade && c.term === nextTerm && c.weeks.includes(nextWeek))?.area;
-    setTerm(nextTerm); setWeek(nextWeek); if (nextArea) setArea(nextArea); setSelected([]);
+    setTerm(nextTerm); setWeek(nextWeek); setSelected([]);
   }
 
   function changeWeek(nextWeek: number) {
-    const nextArea = competencies.find((c) => c.grade === grade && c.term === term && c.weeks.includes(nextWeek))?.area;
-    setWeek(nextWeek); if (nextArea) setArea(nextArea); setSelected([]);
+    setWeek(nextWeek); setSelected([]);
   }
 
   function submit(event: FormEvent) {
@@ -57,7 +64,7 @@ export function CreateLessonPlan({ profile, onGenerated }: { profile: TeacherPro
     <div className="page-heading"><div><span className="eyebrow">New lesson plan</span><h1>Build the week, one clear decision at a time.</h1><p>Choose the official competency first. Every section remains editable after generation.</p></div><div className="step-meter"><b>4 sessions</b><span>Monday–Thursday</span></div></div>
     <div className="builder-layout"><div className="form-stack">
       <section className="form-card"><div className="card-heading"><span>1</span><div><h2>Curriculum & schedule</h2><p>Selections are filtered from the supplied Budget of Work.</p></div></div>
-        <div className="field-grid four"><label>Grade Level<select value={grade} onChange={(e) => changeGrade(Number(e.target.value) as GradeLevel)}>{[7,8,9,10].map((item)=><option key={item} value={item}>Grade {item}</option>)}</select></label><label>Term<select value={term} onChange={(e) => changeTerm((e.target.value === "one-term" ? "one-term" : Number(e.target.value)) as Term)}>{terms.map((item)=><option key={item} value={item}>{termLabel(item)}</option>)}</select></label><label>Week<select value={week} onChange={(e) => changeWeek(Number(e.target.value))}>{weeks.map((item)=><option key={item} value={item}>Week {item}</option>)}</select></label><label>Learning Area<select value={area} onChange={(e) => { setArea(e.target.value as Competency["area"]); setSelected([]); }}>{areas.map((item) => <option key={item}>{item}</option>)}</select></label></div>
+        <div className="field-grid four"><label>Grade Level<select value={grade} onChange={(e) => changeGrade(Number(e.target.value) as GradeLevel)}>{[7,8,9,10].map((item)=><option key={item} value={item}>Grade {item}</option>)}</select></label><label>Learning Area<select value={area} onChange={(e) => changeArea(e.target.value as Competency["area"])}>{areas.map((item) => <option key={item} value={item}>{learningAreaOptionLabel(item)}</option>)}</select></label><label>Term<select value={term} onChange={(e) => changeTerm((e.target.value === "one-term" ? "one-term" : Number(e.target.value)) as Term)}>{terms.map((item)=><option key={item} value={item}>{termLabel(item)}</option>)}</select></label><label>Week<select value={week} onChange={(e) => changeWeek(Number(e.target.value))}>{weeks.map((item)=><option key={item} value={item}>Week {item}</option>)}</select></label></div>
         <div className="competency-list"><div className="list-label"><b>Official competencies</b><small>{available.length} available</small></div>{available.length ? available.map((item) => <label className={`competency ${selected.includes(item.id) ? "selected" : ""}`} key={item.id}><input type="checkbox" checked={selected.includes(item.id)} onChange={() => setSelected(selected.includes(item.id) ? selected.filter((id) => id !== item.id) : [...selected, item.id])}/><span className="check"><Check /></span><span><b>{areaAbbreviation[item.area]} · Week {week}{item.strand ? ` · ${item.strand}` : ""}</b>{item.text}</span></label>) : <div className="empty-inline"><Info />No competency is scheduled for this combination.</div>}</div>
       </section>
       <section className="form-card"><div className="card-heading"><span>2</span><div><h2>Lesson details</h2><p>Set the scope so activities stay realistic for your class period.</p></div></div><div className="field-grid"><label className="wide">Lesson topic<input value={topic} onChange={(e) => setTopic(e.target.value)} required /></label><label>Grade & section<input value={section} onChange={(e) => setSection(e.target.value)} /></label><label>School year<input value={schoolYear} onChange={(e) => setSchoolYear(e.target.value)} /></label><label>Class duration<select value={duration} onChange={(e) => setDuration(Number(e.target.value))}><option value="40">40 minutes</option><option value="50">50 minutes</option><option value="60">60 minutes</option><option value="90">90 minutes</option></select></label><fieldset><legend>Sessions</legend><div className="segmented">{[1,2,3,4].map((n)=><button type="button" className={sessions===n?"active":""} key={n} onClick={()=>setSessions(n)}>{n}</button>)}</div></fieldset></div></section>
