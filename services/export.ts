@@ -64,12 +64,13 @@ export async function exportDocx(plan: LessonPlan) {
     ...[plan.profile.region, plan.profile.division, plan.profile.district, plan.profile.school, plan.profile.location].map((line) => new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: line, size: 17 })] })),
     new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, spacing: { before: 100, after: 120 }, children: [new TextRun({ text: "LESSON PLAN", bold: true, size: 24 })] }),
     new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [1850, 1900, 1900, 1900, 1900], rows: tableRows }),
-    new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [4750, 4750], rows: [new TableRow({ children: [
+    new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [2600, 4300, 2600], rows: [new TableRow({ children: [
       new TableCell({ borders: { top:noBorder,bottom:noBorder,left:noBorder,right:noBorder }, children: [
         new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: "Prepared by:", size: 18 })] }),
         new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 360 }, children: [new TextRun({ text: plan.profile.teacherName, bold: true, size: 19 })] }),
         new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: plan.profile.position, size: 18 })] }),
       ] }),
+      new TableCell({ borders: { top:noBorder,bottom:noBorder,left:noBorder,right:noBorder }, children: [new Paragraph("")] }),
       new TableCell({ borders: { top:noBorder,bottom:noBorder,left:noBorder,right:noBorder }, children: [
         new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: "Checked and Reviewed by:", size: 18 })] }),
         new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 360 }, children: [new TextRun({ text: plan.profile.schoolHead, bold: true, size: 19 })] }),
@@ -96,14 +97,14 @@ export async function exportPdf(plan: LessonPlan) {
   let signatureY = finalTableY + 24;
   if (signatureY > 515) { pdf.addPage("a4", "landscape"); signatureY = 36; }
   pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
-  pdf.text("Prepared by:", 58, signatureY);
-  pdf.text("Checked and Reviewed by:", 477, signatureY);
+  pdf.text("Prepared by:", 32, signatureY);
+  pdf.text("Checked and Reviewed by:", 585, signatureY);
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(10);
-  pdf.text(plan.profile.teacherName, 175, signatureY + 40, { align: "center" });
-  pdf.text(plan.profile.schoolHead, 665, signatureY + 40, { align: "center" });
+  pdf.text(plan.profile.teacherName, 125, signatureY + 40, { align: "center" });
+  pdf.text(plan.profile.schoolHead, 710, signatureY + 40, { align: "center" });
   pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
-  pdf.text(plan.profile.position, 175, signatureY + 54, { align: "center" });
-  pdf.text(plan.profile.schoolHeadPosition, 665, signatureY + 54, { align: "center" });
+  pdf.text(plan.profile.position, 125, signatureY + 54, { align: "center" });
+  pdf.text(plan.profile.schoolHeadPosition, 710, signatureY + 54, { align: "center" });
   pdf.save(`${safe(plan.title)}-ILAW.pdf`);
 }
 
