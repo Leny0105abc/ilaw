@@ -1,6 +1,7 @@
-import { Competency } from "@/types/lesson-plan";
+import { Competency, GradeLevel, LearningArea, Term } from "@/types/lesson-plan";
+import supplementalRaw from "./supplemental-curriculum.json";
 
-const rows: Array<[7 | 8, 1 | 2 | 3, number[], Competency["area"], string[]]> = [
+const rows: Array<[GradeLevel, Term, number[], LearningArea, string[]]> = [
   [7,1,[1],"Agriculture and Fishery Arts",["Discuss career and business opportunities in agriculture.","Differentiate agricultural tools, implements, and equipment."]],
   [7,1,[2],"Agriculture and Fishery Arts",["Identify different tools and equipment used in agriculture.","Discuss safety procedures in farm operations."]],
   [7,1,[3,4],"Agriculture and Fishery Arts",["Discuss hazards and risks in farm operations.","Perform agricultural practices in crop production."]],
@@ -49,12 +50,28 @@ const rows: Array<[7 | 8, 1 | 2 | 3, number[], Competency["area"], string[]]> = 
   [8,3,[10],"Industrial Arts",["Discuss repair service cost in industrial arts."]],
 ];
 
-export const competencies: Competency[] = rows.flatMap(([grade, term, weeks, area, texts], rowIndex) =>
-  texts.map((text, textIndex) => ({ id: `g${grade}-t${term}-r${rowIndex}-${textIndex}`, grade, term, weeks, area, text }))
+const coreCompetencies: Competency[] = rows.flatMap(([grade, term, weeks, area, texts], rowIndex) =>
+  texts.map((text, textIndex) => ({ id: `g${grade}-t${term}-r${rowIndex}-${textIndex}`, grade, term, weeks, area, text, source: `Grade ${grade} TLE AFA/FCS/IA Budget of Work` }))
 );
+
+const supplementalCompetencies = (supplementalRaw as Omit<Competency, "id">[]).map((item, index) => ({ ...item, id: `supplemental-${index}` }));
+
+export const competencies: Competency[] = [...coreCompetencies, ...supplementalCompetencies];
 
 export const areaAbbreviation: Record<Competency["area"], string> = {
   "Agriculture and Fishery Arts": "AFA",
   "Family and Consumer Science": "FCS",
   "Industrial Arts": "IA",
+  "Information and Communications Technology": "ICT",
+  "ICT - Computer Programming": "ICT-CP",
+  "ICT - Computer Systems Servicing": "ICT-CSS",
+  "Good Manners and Right Conduct": "GMRC",
 };
+
+export function termLabel(term: Term) {
+  return term === "one-term" ? "One Term" : `${["", "First", "Second", "Third"][term]} Term`;
+}
+
+export function learningAreaLabel(grade: GradeLevel, area: LearningArea) {
+  return area === "Good Manners and Right Conduct" ? `GMRC ${grade}` : `TLE ${grade} ${areaAbbreviation[area]}`;
+}

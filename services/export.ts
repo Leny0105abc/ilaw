@@ -2,6 +2,7 @@ import { AlignmentType, BorderStyle, Document, HeadingLevel, Packer, PageOrienta
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { LessonPlan } from "@/types/lesson-plan";
+import { learningAreaLabel } from "@/data/curriculum";
 
 const dayValues = <T,>(plan: LessonPlan, getter: (index: number) => T) => Array.from({ length: 4 }, (_, index) => index < plan.sessions.length ? getter(index) : ("" as T));
 const text = (value: unknown) => String(value ?? "");
@@ -9,7 +10,7 @@ const text = (value: unknown) => String(value ?? "");
 function rows(plan: LessonPlan): Array<[string, ...string[]]> {
   return [
     ["Name of Lesson", ...dayValues(plan, () => plan.title)],
-    ["Learning Area/s", ...dayValues(plan, () => `TLE ${plan.grade} ${plan.area}`)],
+    ["Learning Area/s", ...dayValues(plan, () => learningAreaLabel(plan.grade, plan.area))],
     ["Designed by Teacher/s", ...dayValues(plan, () => plan.profile.teacherName)],
     ["Designed for which Grade Level and Section", ...dayValues(plan, () => `GRADE ${plan.grade} - ${plan.section}`)],
     ["No. of Sessions", ...dayValues(plan, (i) => `SESSION ${i + 1}`)],

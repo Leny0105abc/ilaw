@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Competency, LessonPlan, LessonSession, TeacherProfile } from "@/types/lesson-plan";
+import { Competency, GradeLevel, LessonPlan, LessonSession, TeacherProfile, Term } from "@/types/lesson-plan";
 
 const sessionSchema = z.object({
   session: z.number(), day: z.string(), objectives: z.array(z.string()).length(3), learnerContext: z.string(),
@@ -20,7 +20,7 @@ const hooks = [
 const actionVerbs = ["identify and explain", "classify and compare", "demonstrate and apply", "evaluate and communicate"];
 
 type Input = {
-  grade: 7 | 8; area: Competency["area"]; term: 1 | 2 | 3; week: number; competencies: Competency[]; topic: string;
+  grade: GradeLevel; area: Competency["area"]; term: Term; week: number; competencies: Competency[]; topic: string;
   sessions: number; learnerContext: string; duration: number; availableResources: string; instructions: string; profile: TeacherProfile; section: string; schoolYear: string;
 };
 
@@ -71,7 +71,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
     id: `ilaw-${Date.now()}`, title: validated.title, grade: input.grade, section: input.section, area: input.area,
     term: input.term, week: input.week, schoolYear: input.schoolYear, classDuration: input.duration,
     competencyIds: input.competencies.map((item) => item.id), competencyText: validated.competency, topic: input.topic,
-    references: `Grade ${input.grade} TLE AFA/FCS/IA Three-Term Budget of Work; MATATAG K-10 lesson resources`,
+    references: Array.from(new Set(input.competencies.map((item) => item.source).filter(Boolean))).join("; ") || `Grade ${input.grade} Budget of Work`,
     aiDeclaration: "AI was used to assist in organizing the lesson-plan structure, aligning objectives with the selected learning competency, improving wording, and suggesting learning activities and integration opportunities. The teacher reviewed and validated the generated content before use.",
     learnerNotes: input.learnerContext, availableResources: input.availableResources, teacherInstructions: input.instructions,
     status: "Draft", createdAt: now, updatedAt: now, profile: input.profile, sessions: validated.sessions,

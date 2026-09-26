@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "ILAW Lesson Plan Generator",
-  description: "Create, edit, save, print, and export DepEd-aligned ILAW lesson plans.",
+  description: "Create, edit, save, print, and export DepEd-aligned Grade 7–10 TLE and GMRC ILAW lesson plans.",
   icons: { icon: "/favicon.svg" },
 };
 

@@ -1,12 +1,16 @@
-export type LearningArea = "Agriculture and Fishery Arts" | "Family and Consumer Science" | "Industrial Arts";
+export type GradeLevel = 7 | 8 | 9 | 10;
+export type Term = 1 | 2 | 3 | "one-term";
+export type LearningArea = "Agriculture and Fishery Arts" | "Family and Consumer Science" | "Industrial Arts" | "Information and Communications Technology" | "ICT - Computer Programming" | "ICT - Computer Systems Servicing" | "Good Manners and Right Conduct";
 
 export type Competency = {
   id: string;
-  grade: 7 | 8;
-  term: 1 | 2 | 3;
+  grade: GradeLevel;
+  term: Term;
   weeks: number[];
   area: LearningArea;
   text: string;
+  source?: string;
+  strand?: string;
 };
 
 export type LessonSession = {
@@ -38,10 +42,10 @@ export type TeacherProfile = {
 export type LessonPlan = {
   id: string;
   title: string;
-  grade: 7 | 8;
+  grade: GradeLevel;
   section: string;
   area: LearningArea;
-  term: 1 | 2 | 3;
+  term: Term;
   week: number;
   schoolYear: string;
   classDuration: number;
