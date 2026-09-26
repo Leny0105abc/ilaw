@@ -41,6 +41,7 @@ function rows(plan: LessonPlan): Array<[string, ...ExportCell[]]> {
 export async function exportDocx(plan: LessonPlan) {
   const logoData = await fetch("/deped-seal.png").then((response) => response.arrayBuffer());
   const border = { style: BorderStyle.SINGLE, size: 4, color: "64748B" };
+  const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
   const tableRows = [
     new TableRow({ children: ["", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY"].map((item) => new TableCell({ borders: { top:border,bottom:border,left:border,right:border }, shading: { fill: item ? "DDE8F8" : "FFFFFF" }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: item, bold: true, size: 16 })] })] })) }),
     ...rows(plan).map((row) => new TableRow({
@@ -63,8 +64,18 @@ export async function exportDocx(plan: LessonPlan) {
     ...[plan.profile.region, plan.profile.division, plan.profile.district, plan.profile.school, plan.profile.location].map((line) => new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: line, size: 17 })] })),
     new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, spacing: { before: 100, after: 120 }, children: [new TextRun({ text: "LESSON PLAN", bold: true, size: 24 })] }),
     new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [1850, 1900, 1900, 1900, 1900], rows: tableRows }),
-    new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: "Prepared by:", bold: true }), new TextRun({ text: "                                                Checked and Reviewed by:", bold: true })] }),
-    new Paragraph({ children: [new TextRun({ text: `${plan.profile.teacherName}\n${plan.profile.position}` }), new TextRun({ text: `                                                ${plan.profile.schoolHead}\n                                                ${plan.profile.schoolHeadPosition}` })] }),
+    new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [4750, 4750], rows: [new TableRow({ children: [
+      new TableCell({ borders: { top:noBorder,bottom:noBorder,left:noBorder,right:noBorder }, children: [
+        new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: "Prepared by:", size: 18 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 360 }, children: [new TextRun({ text: plan.profile.teacherName, bold: true, size: 19 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: plan.profile.position, size: 18 })] }),
+      ] }),
+      new TableCell({ borders: { top:noBorder,bottom:noBorder,left:noBorder,right:noBorder }, children: [
+        new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: "Checked and Reviewed by:", size: 18 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 360 }, children: [new TextRun({ text: plan.profile.schoolHead, bold: true, size: 19 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: plan.profile.schoolHeadPosition, size: 18 })] }),
+      ] }),
+    ] })] }),
   ] }] });
   const blob = await Packer.toBlob(doc);
   download(blob, `${safe(plan.title)}-ILAW.docx`);
@@ -81,6 +92,18 @@ export async function exportPdf(plan: LessonPlan) {
   pdf.text(`${plan.profile.school} - ${plan.profile.location}`, 421, 115, { align: "center" });
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(12); pdf.text("LESSON PLAN", 421, 132, { align: "center" });
   autoTable(pdf, { startY: 142, head: [["", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY"]], body: rows(plan), theme: "grid", styles: { fontSize: 5.6, cellPadding: 2.4, valign: "top", lineColor: [100,116,139], lineWidth: .3 }, headStyles: { fillColor: [23,63,138], textColor: 255, halign: "center" }, columnStyles: { 0: { fillColor: [238,243,249], fontStyle: "bold", cellWidth: 106 } }, margin: { left: 16, right: 16 } });
+  const finalTableY = (pdf as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 460;
+  let signatureY = finalTableY + 24;
+  if (signatureY > 515) { pdf.addPage("a4", "landscape"); signatureY = 36; }
+  pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
+  pdf.text("Prepared by:", 58, signatureY);
+  pdf.text("Checked and Reviewed by:", 477, signatureY);
+  pdf.setFont("helvetica", "bold"); pdf.setFontSize(10);
+  pdf.text(plan.profile.teacherName, 175, signatureY + 40, { align: "center" });
+  pdf.text(plan.profile.schoolHead, 665, signatureY + 40, { align: "center" });
+  pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
+  pdf.text(plan.profile.position, 175, signatureY + 54, { align: "center" });
+  pdf.text(plan.profile.schoolHeadPosition, 665, signatureY + 54, { align: "center" });
   pdf.save(`${safe(plan.title)}-ILAW.pdf`);
 }
 
