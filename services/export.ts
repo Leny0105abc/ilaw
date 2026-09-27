@@ -8,9 +8,10 @@ import { assessmentDescription, learningExperienceDescription, lessonNameWithWee
 const dayValues = <T,>(plan: LessonPlan, getter: (index: number) => T) => Array.from({ length: 4 }, (_, index) => index < plan.sessions.length ? getter(index) : ("" as T));
 const text = (value: unknown) => String(value ?? "");
 
-type ExportCell = string | { content: string; colSpan: number };
+type ExportCell = string | { content: string; colSpan?: number; styles?: { halign: "center" } };
 
 function merged(content: string): ExportCell { return { content, colSpan: 4 }; }
+function centered(content: string): ExportCell { return { content, styles: { halign: "center" } }; }
 
 function rows(plan: LessonPlan): Array<[string, ...ExportCell[]]> {
   const labels = lessonPlanLabels(plan.area);
@@ -19,7 +20,7 @@ function rows(plan: LessonPlan): Array<[string, ...ExportCell[]]> {
     [labels.area, merged(learningAreaLabel(plan.grade, plan.area))],
     [labels.teacher, merged(plan.profile.teacherName)],
     [labels.gradeSection, merged(`${labels.gradeWord} ${plan.grade} - ${plan.section}`)],
-    [labels.sessions, ...dayValues(plan, (i) => `${labels.session} ${i + 1}`)],
+    [labels.sessions, ...dayValues(plan, (i) => centered(`${labels.session} ${i + 1}`))],
     [labels.references, merged(plan.references)],
     [labels.ai, merged(plan.aiDeclaration)],
     [labels.intentions, merged(labels.intentionDescription)],
@@ -61,7 +62,7 @@ export async function exportDocx(plan: LessonPlan) {
           columnSpan: typeof item === "string" ? undefined : item.colSpan,
           borders: { top:border,bottom:border,left:border,right:border },
           shading: index === 0 ? { fill: "EEF3F9" } : undefined,
-          children: text(value).split("\n").map((line) => new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: line, bold: index === 0, size: 15 })] })),
+          children: text(value).split("\n").map((line) => new Paragraph({ alignment: typeof item !== "string" && item.styles?.halign === "center" ? AlignmentType.CENTER : undefined, spacing: { after: 40 }, children: [new TextRun({ text: line, bold: index === 0 || (typeof item !== "string" && item.styles?.halign === "center"), size: 15 })] })),
         });
       }),
     })),
@@ -75,13 +76,12 @@ export async function exportDocx(plan: LessonPlan) {
     new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [1850, 1900, 1900, 1900, 1900], rows: tableRows(pageOneRows) }),
     new Paragraph({ pageBreakBefore: true, alignment: AlignmentType.CENTER, spacing: { after: 120 }, children: [new TextRun({ text: `${labels.lessonPlan} – ${labels.continuation}`, bold: true, size: 22 })] }),
     new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [1850, 1900, 1900, 1900, 1900], rows: tableRows(pageTwoRows) }),
-    new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [2600, 4300, 2600], rows: [new TableRow({ children: [
+    new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [4750, 4750], rows: [new TableRow({ children: [
       new TableCell({ borders: { top:noBorder,bottom:noBorder,left:noBorder,right:noBorder }, children: [
         new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: labels.preparedBy, size: 18 })] }),
         new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 360 }, children: [new TextRun({ text: plan.profile.teacherName, bold: true, size: 19 })] }),
         new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: localizedPosition(plan.profile.position, plan.area), size: 18 })] }),
       ] }),
-      new TableCell({ borders: { top:noBorder,bottom:noBorder,left:noBorder,right:noBorder }, children: [new Paragraph("")] }),
       new TableCell({ borders: { top:noBorder,bottom:noBorder,left:noBorder,right:noBorder }, children: [
         new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: labels.reviewedBy, size: 18 })] }),
         new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 360 }, children: [new TextRun({ text: plan.profile.schoolHead, bold: true, size: 19 })] }),
@@ -114,14 +114,19 @@ export async function exportPdf(plan: LessonPlan) {
   let signatureY = finalTableY + 24;
   if (signatureY > 515) { pdf.addPage("a4", "landscape"); signatureY = 36; }
   pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
-  pdf.text(labels.preparedBy, 32, signatureY);
-  pdf.text(labels.reviewedBy, 585, signatureY);
+  const signatureLeft = 32;
+  const signatureWidth = 778;
+  const signatureColumnWidth = signatureWidth / 2;
+  const leftSignatureCenter = signatureLeft + signatureColumnWidth / 2;
+  const rightSignatureCenter = signatureLeft + signatureColumnWidth + signatureColumnWidth / 2;
+  pdf.text(labels.preparedBy, signatureLeft, signatureY);
+  pdf.text(labels.reviewedBy, signatureLeft + signatureColumnWidth, signatureY);
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(10);
-  pdf.text(plan.profile.teacherName, 125, signatureY + 40, { align: "center" });
-  pdf.text(plan.profile.schoolHead, 710, signatureY + 40, { align: "center" });
+  pdf.text(plan.profile.teacherName, leftSignatureCenter, signatureY + 40, { align: "center" });
+  pdf.text(plan.profile.schoolHead, rightSignatureCenter, signatureY + 40, { align: "center" });
   pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
-  pdf.text(localizedPosition(plan.profile.position, plan.area), 125, signatureY + 54, { align: "center" });
-  pdf.text(localizedPosition(plan.profile.schoolHeadPosition, plan.area), 710, signatureY + 54, { align: "center" });
+  pdf.text(localizedPosition(plan.profile.position, plan.area), leftSignatureCenter, signatureY + 54, { align: "center" });
+  pdf.text(localizedPosition(plan.profile.schoolHeadPosition, plan.area), rightSignatureCenter, signatureY + 54, { align: "center" });
   pdf.save(`${safe(plan.title)}-ILAW.pdf`);
 }
 
