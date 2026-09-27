@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./dashboard-selection.css";
 
 export const metadata: Metadata = {
   title: "ILAW Lesson Plan Generator",

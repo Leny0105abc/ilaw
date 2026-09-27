@@ -1,0 +1,87 @@
+.library-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.danger-btn {
+  border-color: #f0b6b6;
+  color: #a62d2d;
+  background: #fff7f7;
+}
+
+.danger-btn:hover {
+  background: #ffeded;
+}
+
+.plan-row {
+  grid-template-columns: 34px minmax(0, 2fr) minmax(0, 1.25fr) 0.7fr 0.8fr 90px;
+}
+
+.plan-row.selected,
+.plan-row.selected:hover {
+  background: #eef4ff;
+}
+
+.plan-select {
+  display: grid;
+  place-items: center;
+}
+
+.plan-select input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--blue);
+  cursor: pointer;
+}
+
+@media (max-width: 1100px) {
+  .library-head {
+    align-items: flex-start;
+  }
+
+  .library-tools {
+    align-items: flex-end;
+    flex-direction: column;
+  }
+
+  .plan-row {
+    grid-template-columns: 34px minmax(0, 1.7fr) minmax(0, 1fr) 0.7fr 70px;
+  }
+
+  .modified-cell {
+    display: none;
+  }
+
+  .status-cell {
+    display: block;
+  }
+}
+
+@media (max-width: 800px) {
+  .library-tools {
+    align-items: stretch;
+    margin-top: 0.8rem;
+  }
+
+  .filters {
+    margin-top: 0.2rem;
+  }
+
+  .plan-row,
+  .plan-row.header {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+  }
+
+  .curriculum-cell,
+  .status-cell,
+  .modified-cell {
+    display: none !important;
+  }
+
+  .lesson-cell {
+    display: block !important;
+  }
+}

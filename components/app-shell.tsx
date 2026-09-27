@@ -28,6 +28,7 @@ export function AppShell() {
   const stats = useMemo(() => ({ total: plans.length, drafts: plans.filter((p) => p.status === "Draft").length, completed: plans.filter((p) => p.status === "Completed").length }), [plans]);
 
   function persist(next: LessonPlan[]) { setPlans(next); savePlans(next); }
+  function deletePlans(ids: string[]) { const selected = new Set(ids); setPlans((current) => { const next = current.filter((plan) => !selected.has(plan.id)); savePlans(next); return next; }); }
   function open(plan: LessonPlan) { setActive(plan); setView("editor"); }
   function save(plan: LessonPlan) { const next = [plan, ...plans.filter((item) => item.id !== plan.id)]; persist(next); setActive(plan); }
   function navigate(next: View) { setView(next); setMobileNav(false); }
@@ -44,9 +45,9 @@ export function AppShell() {
     {mobileNav && <button className="nav-scrim" onClick={() => setMobileNav(false)} aria-label="Close navigation" />}
     <main>
       <header className="topbar"><button className="icon-btn menu-btn" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu /></button><div><span className="eyebrow">School Year 2026–2027</span><strong>{view === "editor" ? "Review lesson plan" : nav.find(([id]) => id === view)?.[1] || "ILAW"}</strong></div><div className="save-state"><i />Saved on this device</div></header>
-      {view === "dashboard" && <Dashboard plans={plans} stats={stats} onCreate={() => navigate("create")} onOpen={open} onDelete={(id) => persist(plans.filter((p) => p.id !== id))} />}
+      {view === "dashboard" && <Dashboard plans={plans} stats={stats} onCreate={() => navigate("create")} onOpen={open} onDelete={(id) => deletePlans([id])} onDeleteMany={deletePlans} />}
       {view === "create" && <CreateLessonPlan profile={profile} onGenerated={(plan) => { save(plan); open(plan); }} />}
-      {view === "plans" && <Dashboard plans={plans} stats={stats} compact onCreate={() => navigate("create")} onOpen={open} onDelete={(id) => persist(plans.filter((p) => p.id !== id))} />}
+      {view === "plans" && <Dashboard plans={plans} stats={stats} compact onCreate={() => navigate("create")} onOpen={open} onDelete={(id) => deletePlans([id])} onDeleteMany={deletePlans} />}
       {view === "curriculum" && <CurriculumView />}
       {view === "settings" && <SettingsView profile={profile} onSave={(next) => { setProfile(next); saveProfile(next); }} />}
       {view === "editor" && active && <LessonEditor plan={active} onSave={save} onBack={() => navigate("plans")} />}
