@@ -27,6 +27,66 @@ const tagalogHooks = [
 ];
 const tagalogActionVerbs = ["tukuyin at ipaliwanag", "uriin at paghambingin", "ipakita at isabuhay", "suriin at ipahayag"];
 
+function englishFlow(session: number, focus: string, verb: string): LessonSession["flow"] {
+  const flows: LessonSession["flow"][] = [
+    {
+      iDo: `Introduce ${focus} through a familiar home, school, or community example. Use a short think-aloud to model how to ${verb} the essential ideas, then unpack the lesson vocabulary and success criteria with a visual concept map.`,
+      weDo: `Conduct a Notice–Think–Wonder activity using two contrasting examples. Learners contribute observations while the class completes a shared organizer that separates prior knowledge, new information, and questions for investigation.`,
+      youDo: `Learners create an individual mini concept map or vocabulary match showing the key ideas and one real-life connection. Provide picture cues, sentence starters, or a word bank; early finishers add a second example and explain why it fits.`,
+      synthesis: `Use a 3–2–1 exit response: three ideas learned, two useful examples, and one remaining question. Group the questions to identify what needs clarification at the start of Session 2.`,
+    },
+    {
+      iDo: `Review the Session 1 exit responses, then model how to compare, classify, or analyze examples related to ${focus}. Think aloud while applying clear criteria and deliberately correct one common misconception.`,
+      weDo: `Run a guided card-sort or gallery analysis. Small groups place examples under agreed categories, rotate to inspect another group’s work, and use evidence from the lesson to confirm or revise one placement.`,
+      youDo: `Pairs analyze a new scenario or set of examples and complete a compare-and-justify organizer. Each pair must cite two details, explain its decision, and prepare one question for another pair.`,
+      synthesis: `Pairs exchange answers for a brief evidence check. Learners complete: “I first thought ___; now I understand ___ because ___,” and the teacher records one class rule or principle to carry into Session 3.`,
+    },
+    {
+      iDo: `Demonstrate a practical application of ${focus} from start to finish. Pause at each decision point to highlight safety, accuracy, responsible practice, and the quality indicators on the performance checklist.`,
+      weDo: `Lead a guided rehearsal in pairs or stations. Learners take rotating roles as performer, observer, and coach while the class practices one step at a time and gives feedback using the checklist.`,
+      youDo: `Learners complete an individual or paired application task that produces a concrete output, demonstration, solution, or action plan. Offer adapted materials and role choices without changing the required success criteria.`,
+      synthesis: `Use “Two strengths and one next step.” Learners compare their output with the checklist, identify evidence of quality, and revise one part before explaining how the skill can be used beyond the classroom.`,
+    },
+    {
+      iDo: `Present an authentic challenge that requires learners to transfer what they learned about ${focus}. Model how to define the problem, weigh possible actions, choose a solution, and verify it against the week’s criteria.`,
+      weDo: `Facilitate a team planning conference. Groups examine a case, assign roles, draft a solution or product, and receive one round of teacher and peer questions before finalizing their approach.`,
+      youDo: `Learners complete and present a culminating performance, product, or solution for the challenge. The audience uses the shared rubric to note evidence, ask a clarifying question, and suggest one realistic improvement.`,
+      synthesis: `Learners complete a final reflection: “What I can now do,” “What evidence proves it,” and “What I will improve next.” Close with a short retrieval check that connects the four sessions and confirms the competency.`,
+    },
+  ];
+  return flows[session];
+}
+
+function tagalogFlow(session: number, focus: string, verb: string): LessonSession["flow"] {
+  const flows: LessonSession["flow"][] = [
+    {
+      iDo: `Ipakilala ang ${focus} sa pamamagitan ng pamilyar na halimbawa mula sa tahanan, paaralan, o pamayanan. Ipakita sa think-aloud kung paano ${verb} ang mahahalagang ideya, saka linawin ang pangunahing bokabularyo at pamantayan ng tagumpay gamit ang biswal na concept map.`,
+      weDo: `Isagawa ang Pansinin–Isipin–Itanong gamit ang dalawang magkaibang halimbawa. Magbahagi ang mga mag-aaral ng obserbasyon habang sama-samang pinupunan ang organizer para sa dating kaalaman, bagong impormasyon, at mga tanong na dapat siyasatin.`,
+      youDo: `Gumawa ang bawat mag-aaral ng mini concept map o pagtutugma ng salita at kahulugan na nagpapakita ng mahahalagang ideya at isang ugnay sa tunay na buhay. Magbigay ng larawang pahiwatig, panimulang pangungusap, o talaan ng salita kung kailangan.`,
+      synthesis: `Gamitin ang 3–2–1 exit response: tatlong natutuhan, dalawang kapaki-pakinabang na halimbawa, at isang natitirang tanong. Pangkatin ang mga tanong upang malaman ang dapat linawin sa simula ng Sesyon 2.`,
+    },
+    {
+      iDo: `Balikan ang exit responses sa Sesyon 1 at ipakita kung paano paghambingin, uriin, o suriin ang mga halimbawang kaugnay ng ${focus}. Ipaliwanag ang bawat pamantayan at sadyang itama ang isang karaniwang maling pagkaunawa.`,
+      weDo: `Magsagawa ng ginabayang card-sort o gallery analysis. Iuri ng maliliit na pangkat ang mga halimbawa, suriin ang gawa ng ibang pangkat, at gumamit ng ebidensiya mula sa aralin upang pagtibayin o baguhin ang isang sagot.`,
+      youDo: `Suriin ng mga pares ang isang bagong sitwasyon o pangkat ng halimbawa at kumpletuhin ang organizer na naghahambing at nagbibigay-katwiran. Dapat magbanggit ng dalawang detalye, ipaliwanag ang pasya, at bumuo ng isang tanong para sa ibang pares.`,
+      synthesis: `Magpalitan ng sagot ang mga pares para sa maikling pagsusuri ng ebidensiya. Kumpletuhin ang pahayag: “Noong una, akala ko ___; ngayon, nauunawaan kong ___ dahil ___,” saka buuin ang isang tuntuning dadalhin sa Sesyon 3.`,
+    },
+    {
+      iDo: `Ipakita mula simula hanggang wakas ang praktikal na aplikasyon ng ${focus}. Huminto sa bawat mahalagang pagpapasya upang bigyang-diin ang kaligtasan, kawastuhan, responsableng pagkilos, at mga pamantayan sa performance checklist.`,
+      weDo: `Pangunahan ang ginabayang ensayo sa pares o learning stations. Magpalitan ang mga mag-aaral bilang tagaganap, tagamasid, at coach habang isinasagawa ang bawat hakbang at nagbibigay ng puna gamit ang checklist.`,
+      youDo: `Kumpletuhin ng mga mag-aaral ang indibidwal o pares na gawaing aplikasyon na may kongkretong output, demonstrasyon, solusyon, o plano ng pagkilos. Magbigay ng angkop na kagamitan at pagpipilian sa papel nang hindi binabago ang pamantayan.`,
+      synthesis: `Gamitin ang “Dalawang kalakasan at isang susunod na hakbang.” Ihambing ng mga mag-aaral ang kanilang output sa checklist, tukuyin ang patunay ng kalidad, at baguhin ang isang bahagi bago ipaliwanag ang gamit nito sa labas ng klase.`,
+    },
+    {
+      iDo: `Maglahad ng tunay na hamon na nangangailangan ng paglilipat ng natutuhan tungkol sa ${focus}. Ipakita kung paano tukuyin ang suliranin, timbangin ang mga posibleng kilos, pumili ng solusyon, at suriin ito ayon sa pamantayan ng buong linggo.`,
+      weDo: `Magsagawa ng pangkatang planning conference. Suriin ng bawat pangkat ang kaso, magtalaga ng tungkulin, bumuo ng solusyon o produkto, at tumanggap ng isang ikot ng tanong mula sa guro at kapwa mag-aaral bago ito tapusin.`,
+      youDo: `Tapusin at ilahad ng mga mag-aaral ang pangwakas na pagganap, produkto, o solusyon. Gamitin ng tagapakinig ang iisang rubric upang magtala ng ebidensiya, magtanong para sa paglilinaw, at magmungkahi ng isang makatotohanang pagpapahusay.`,
+      synthesis: `Kumpletuhin ang pangwakas na pagninilay: “Ano na ang kaya kong gawin,” “Anong ebidensiya ang nagpapatunay nito,” at “Ano pa ang pagbubutihin ko.” Magtapos sa maikling retrieval check na nag-uugnay sa apat na sesyon.`,
+    },
+  ];
+  return flows[session];
+}
+
 type Input = {
   grade: GradeLevel; area: Competency["area"]; term: Term; week: number; competencies: Competency[]; topic: string;
   sessions: number; learnerContext: string; duration: number; availableResources: string; instructions: string; profile: TeacherProfile; section: string; schoolYear: string;
@@ -67,12 +127,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
       ],
       learnerContext: `${support} Sa Sesyon ${index + 1}, gagamit ng ${index < 2 ? "mga ginabayang halimbawa at biswal na pahiwatig" : "nakabalangkas na aplikasyon, tseklist, at suporta ng kapwa mag-aaral"} upang matugunan ang mga hamon sa pagbasa, tiwala sa sarili, o kakulangan sa kagamitan.`,
       preLesson: tagalogHooks[index],
-      flow: {
-        iDo: `Ilahad ang mga layunin at iugnay ang aralin sa pamilyar na halimbawa sa tahanan, paaralan, o pamayanan. Ipakita kung paano ${verb} ang ${focus} gamit ang halimbawang may paliwanag at malinaw na pamantayan ng tagumpay.`,
-        weDo: `Gabayan ang mga mag-aaral sa dalawang halimbawa. Itanong: “Ano ang napansin mo?”, “Anong patunay ang sumusuporta sa iyong sagot?”, at “Paano ito magagamit sa tunay na buhay?” Suriin ang pag-unawa sa pamamagitan ng response cards, senyas ng kamay, o maikling pasalitang sagot.`,
-        youDo: `${index < 2 ? "Kumpletuhin ng mga pares ang maikling gawain sa pag-uuri, paglalagay ng label, o paghahambing" : "Kumpletuhin ng mga mag-aaral ang praktikal na aplikasyon o maikling presentasyon"}. Magbigay ng biswal na pahiwatig, talaan ng salita, at gabay sa maliit na pangkat kung kinakailangan; pahintulutan ang pasalita o pasulat na pagsagot.`,
-        synthesis: `Kumpletuhin ng mga mag-aaral ang pahayag: “Ang pinakamahalagang ideya tungkol sa ${focus} ay ___ dahil ___.” Linawin ng guro ang maling pagkaunawa at ihanda ang susunod na sesyon.`,
-      },
+      flow: tagalogFlow(index, focus, verb),
       resources,
       integration: `Filipino at GMRC: Gamitin ng mga mag-aaral ang wastong bokabularyo upang maipahayag ang kanilang pangangatwiran at maiugnay ang aralin sa responsable at makataong pagpapasya sa tahanan, paaralan, at pamayanan.`,
       assessment: `Gumamit ng ${index < 2 ? "5-aytem na gawain sa pag-uuri o pagsusuri ng pag-unawa" : "maikling gawaing pagganap na may 4-puntong tseklist"} na nakaayon sa mga layunin ng sesyon. Tanggapin ang pasalita, pasulat, o aktuwal na pagpapakita; magbigay ng biswal na suporta, karagdagang gabay, at opsiyon para sa maliit na pangkat.`,
@@ -89,12 +144,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
       ],
       learnerContext: `${support} Session ${index + 1} uses ${index < 2 ? "guided examples and visual prompts" : "structured application with checklists and peer support"} to address possible reading, confidence, or resource barriers.`,
       preLesson: hooks[index],
-      flow: {
-        iDo: `State the objectives and connect the lesson to a familiar home, school, or community example. Model how to ${verb} ${focus} using a worked example, think-aloud, and a visible success checklist.`,
-        weDo: `Guide learners through two examples. Ask “What do you notice?”, “What evidence supports your answer?”, and “How is this useful in real life?” Check understanding through response cards, hand signals, or brief oral answers.`,
-        youDo: `${index < 2 ? "Pairs complete a short sorting, labeling, or comparison task" : "Learners complete a practical application or mini-presentation"}. Provide visual cues, a word bank, and small-group guidance where needed; allow oral or written responses.`,
-        synthesis: `Learners complete the statement: “The most important idea about ${focus} is ___ because ___.” The teacher clarifies misconceptions and previews the next session.`,
-      },
+      flow: englishFlow(index, focus, verb),
       resources,
       integration: index % 2 === 0
         ? `English: learners use lesson-specific vocabulary to explain evidence and communicate a clear conclusion during paired discussion.`
