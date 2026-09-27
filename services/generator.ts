@@ -89,22 +89,22 @@ function tagalogFlow(session: number, focus: string, verb: string): LessonSessio
 
 function englishLearnerContext(session: number, focus: string, teacherNotes: string) {
   const profiles = [
-    `Learners have introductory knowledge and everyday experiences related to ${focus}, but many may not yet recognize the topic’s essential concepts or vocabulary. They are interested in games, pictures, stories, and familiar examples, so the learning environment should provide visual prompts, short oral exchanges, and low-risk ways to share prior knowledge.`,
-    `Learners can recall the basic ideas introduced in the previous session and are beginning to identify examples related to ${focus}. They learn well through videos, demonstrations, guided classification, and comparison activities, although some need repeated modeling, a word bank, and partner support to recognize important characteristics accurately.`,
-    `Learners are ready to apply their understanding of ${focus} through collaborative and hands-on tasks. They are generally engaged when given clear roles and concrete materials, but some need step-by-step scaffolds, sentence starters, checklists, and feedback to explain their reasoning and perform the task with confidence.`,
-    `Learners show strong interest in authentic, real-life applications of ${focus} and are prepared to create, demonstrate, or present what they have learned. They benefit from choice and peer collaboration, but still require clear safety expectations, teacher supervision, accessible resources, and structured reflection during culminating or field-based activities.`,
+    `Learners have basic knowledge of ${focus} but limited understanding of its key concepts. They are motivated by visuals, games, and familiar examples.`,
+    `Learners can recall the basic ideas about ${focus}, but some need help identifying and comparing important details. They learn best through videos, demonstrations, and guided activities.`,
+    `Learners enjoy collaborative and hands-on tasks about ${focus}, but some need clear steps and support in explaining their ideas. Roles, checklists, and feedback help them participate confidently.`,
+    `Learners are interested in real-life applications of ${focus} and are ready to show what they have learned. They still need clear expectations, suitable resources, and teacher supervision.`,
   ];
-  return `${profiles[session]}${teacherNotes ? ` Teacher-provided learner information to consider: ${teacherNotes}` : ""}`;
+  return `${profiles[session]}${teacherNotes ? ` Consider also: ${teacherNotes}` : ""}`;
 }
 
 function tagalogLearnerContext(session: number, focus: string, teacherNotes: string) {
   const profiles = [
-    `Ang mga mag-aaral ay may panimulang kaalaman at karanasang pang-araw-araw na kaugnay ng ${focus}, ngunit marami ang hindi pa nakikilala ang mahahalagang konsepto at bokabularyo nito. Nahihikayat sila ng laro, larawan, kuwento, at pamilyar na halimbawa, kaya kailangan ang biswal na pahiwatig, maikling talakayan, at ligtas na pagkakataong maibahagi ang dating kaalaman.`,
-    `Ang mga mag-aaral ay nakaaalala sa mga batayang ideyang tinalakay sa nakaraang sesyon at nagsisimula nang tumukoy ng mga halimbawang kaugnay ng ${focus}. Mas nauunawaan nila ang aralin sa pamamagitan ng bidyo, demonstrasyon, ginabayang pag-uuri, at paghahambing, ngunit ang ilan ay nangangailangan ng paulit-ulit na pagmomodelo, talaan ng salita, at suporta ng kapareha.`,
-    `Ang mga mag-aaral ay handa nang ilapat ang kanilang pag-unawa sa ${focus} sa kolaboratibo at praktikal na gawain. Aktibo sila kapag malinaw ang tungkulin at kongkreto ang kagamitan, ngunit ang ilan ay nangangailangan ng sunod-sunod na gabay, panimulang pangungusap, checklist, at puna upang malinaw na maipaliwanag ang konsepto at maisagawa ang gawain.`,
-    `Ang mga mag-aaral ay lubos na interesado sa makatotohanang aplikasyon ng ${focus} at handa nang lumikha, magpakita, o maglahad ng kanilang natutuhan. Nakikinabang sila sa pagpili at pakikipagtulungan, ngunit kailangan pa rin ang malinaw na panuntunan sa kaligtasan, superbisyon ng guro, madaling gamiting kagamitan, at nakabalangkas na pagninilay.`,
+    `Ang mga mag-aaral ay may batayang kaalaman sa ${focus} ngunit limitado pa ang pag-unawa sa mahahalagang konsepto. Nahihikayat sila ng larawan, laro, at pamilyar na halimbawa.`,
+    `Ang mga mag-aaral ay nakaaalala sa mga batayang ideya tungkol sa ${focus}, ngunit ang ilan ay nangangailangan ng tulong sa pagtukoy at paghahambing. Mas natututo sila sa bidyo, demonstrasyon, at ginabayang gawain.`,
+    `Ang mga mag-aaral ay aktibo sa pangkatan at praktikal na gawain tungkol sa ${focus}, ngunit ang ilan ay nangangailangan ng malinaw na hakbang at gabay sa pagpapaliwanag. Nakatutulong ang tungkulin, checklist, at puna.`,
+    `Ang mga mag-aaral ay interesado sa tunay na aplikasyon ng ${focus} at handang ipakita ang kanilang natutuhan. Kailangan pa rin nila ng malinaw na pamantayan, angkop na kagamitan, at superbisyon ng guro.`,
   ];
-  return `${profiles[session]}${teacherNotes ? ` Karagdagang impormasyong ibinigay ng guro na dapat isaalang-alang: ${teacherNotes}` : ""}`;
+  return `${profiles[session]}${teacherNotes ? ` Isaalang-alang din: ${teacherNotes}` : ""}`;
 }
 
 type Input = {
