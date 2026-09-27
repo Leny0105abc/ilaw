@@ -150,7 +150,12 @@ export function generateLessonPlan(input: Input): LessonPlan {
       flow: tagalogFlow(index, focus, verb),
       resources,
       integration: `Filipino at GMRC: Gamitin ng mga mag-aaral ang wastong bokabularyo upang maipahayag ang kanilang pangangatwiran at maiugnay ang aralin sa responsable at makataong pagpapasya sa tahanan, paaralan, at pamayanan.`,
-      assessment: `Gumamit ng ${index < 2 ? "5-aytem na gawain sa pag-uuri o pagsusuri ng pag-unawa" : "maikling gawaing pagganap na may 4-puntong tseklist"} na nakaayon sa mga layunin ng sesyon. Tanggapin ang pasalita, pasulat, o aktuwal na pagpapakita; magbigay ng biswal na suporta, karagdagang gabay, at opsiyon para sa maliit na pangkat.`,
+      assessment: [
+        `5-aytem na multiple-choice quiz tungkol sa ${focus}.`,
+        `Activity sheet: tukuyin at isa-isahin ang mahahalagang ideya tungkol sa ${focus}.`,
+        `Pangkatang presentasyon o demonstrasyon na mamarkahan gamit ang maikling rubric.`,
+        `Portfolio output at maikling reflection journal tungkol sa natutuhan sa ${focus}.`,
+      ][index],
       extendedLearning: `Sa tahanan o pamayanan, magmasid ng isang ligtas at walang-gastos na halimbawa na kaugnay ng ${focus}, itala o ilarawan ang napansin, at ibahagi ito sa susunod na klase. Maaaring tumulong ang isang kasapi ng pamilya.`,
       reflection: `Natamo ba ng mga mag-aaral ang tatlong layunin para sa Sesyon ${index + 1}? Sino ang nangangailangan ng karagdagang suporta, anong maling pagkaunawa ang dapat muling talakayin, at ano ang dapat baguhin sa susunod na sesyon?`,
     };
@@ -169,7 +174,12 @@ export function generateLessonPlan(input: Input): LessonPlan {
       integration: index % 2 === 0
         ? `English: learners use lesson-specific vocabulary to explain evidence and communicate a clear conclusion during paired discussion.`
         : `${input.area === "Family and Consumer Science" ? "Values Education" : input.area === "Industrial Arts" ? "Mathematics" : "Science"}: learners connect the competency to ${input.area === "Industrial Arts" ? "measurement, accuracy, and safe problem solving" : "responsible decisions affecting people, resources, and the environment"}.`,
-      assessment: `Use a ${index < 2 ? "5-item classification/check-for-understanding task" : "brief performance task with a 4-point checklist"} aligned with the session objectives. Accept oral, written, or demonstrated responses; provide visual support, additional guidance, and a small-group option.`,
+      assessment: [
+        `5-item multiple-choice quiz about ${focus}.`,
+        `Activity sheet: identify and enumerate the key ideas about ${focus}.`,
+        `Group presentation or task demonstration scored with a short rubric.`,
+        `Portfolio output and a short reflection journal about learning in ${focus}.`,
+      ][index],
       extendedLearning: `At home or in the community, learners observe one safe and no-cost example related to ${focus}, record or describe what they noticed, and share it in the next class. A family member may assist.` ,
       reflection: `Were learners able to meet the three objectives for Session ${index + 1}? Which learners need additional support, what misconception needs reteaching, and what should be adjusted for the next session?`,
     };
