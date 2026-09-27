@@ -14,7 +14,7 @@ export function CreateLessonPlan({ profile, onGenerated }: { profile: TeacherPro
   const [topic, setTopic] = useState(""); const [sessions, setSessions] = useState(4);
   const [section, setSection] = useState("MAKAKALIKASAN"); const [duration, setDuration] = useState(60); const [schoolYear, setSchoolYear] = useState("2026–2027");
   const [tags, setTags] = useState<string[]>(["Mixed ability levels", "Responds well to visuals"]); const [notes, setNotes] = useState("");
-  const [resources, setResources] = useState("PowerPoint, pictures, activity sheets, available beauty care tools"); const [instructions, setInstructions] = useState("");
+  const [resources, setResources] = useState(""); const [instructions, setInstructions] = useState("");
   const [generating, setGenerating] = useState(false); const [error, setError] = useState("");
   const available = useMemo(() => competencies.filter((c) => c.grade === grade && c.term === term && c.weeks.includes(week) && c.area === area), [grade, term, week, area]);
   const selectedCompetencies = available.filter((c) => selected.includes(c.id));

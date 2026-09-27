@@ -39,6 +39,11 @@ const tagalogResourceSets = [
   ["mga online na sanggunian", "presentasyong PowerPoint", "mga graphic organizer", "mga kagamitang pantaya"],
 ];
 
+export function defaultLearningResources(area: string, sessionIndex: number) {
+  const sets = isTagalogLearningArea(area) ? tagalogResourceSets : englishResourceSets;
+  return [...sets[Math.min(sessionIndex, sets.length - 1)]];
+}
+
 function englishObjectives(session: number, focus: string) {
   const objectiveSets = [
     [
@@ -199,7 +204,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
 
   const sessions: LessonSession[] = Array.from({ length: input.sessions }, (_, index) => {
     const verb = (tagalog ? tagalogActionVerbs : actionVerbs)[index];
-    const resources = providedResources.length ? providedResources : (tagalog ? tagalogResourceSets : englishResourceSets)[index];
+    const resources = providedResources.length ? providedResources : defaultLearningResources(input.area, index);
     if (tagalog) return {
       session: index + 1,
       day: ["LUNES", "MARTES", "MIYERKULES", "HUWEBES"][index],
