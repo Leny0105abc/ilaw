@@ -39,6 +39,58 @@ const tagalogResourceSets = [
   ["mga online na sanggunian", "presentasyong PowerPoint", "mga graphic organizer", "mga kagamitang pantaya"],
 ];
 
+function englishObjectives(session: number, focus: string) {
+  const objectiveSets = [
+    [
+      `Identify the key concepts and examples related to ${focus} with at least 80% accuracy. (Bloom’s Taxonomy: Remembering)`,
+      `Explain in their own words how the key ideas about ${focus} are connected and why they are important. (Bloom’s Taxonomy: Understanding)`,
+      `Classify examples related to ${focus} using the agreed criteria, with at least three out of four items correct. (Bloom’s Taxonomy: Applying)`,
+    ],
+    [
+      `Identify the defining characteristics of examples related to ${focus} with at least 80% accuracy. (Bloom’s Taxonomy: Remembering)`,
+      `Compare two examples related to ${focus} and explain at least two similarities or differences using lesson evidence. (Bloom’s Taxonomy: Analyzing)`,
+      `Apply the agreed criteria to organize or classify a new set of examples related to ${focus}. (Bloom’s Taxonomy: Applying)`,
+    ],
+    [
+      `Describe the correct steps and safety or quality criteria needed when applying ${focus}. (Bloom’s Taxonomy: Understanding)`,
+      `Explain why each major step or criterion is important to an accurate and responsible performance. (Bloom’s Taxonomy: Understanding)`,
+      `Demonstrate or perform the skill related to ${focus}, meeting at least four out of five checklist criteria. (Bloom’s Taxonomy: Applying)`,
+    ],
+    [
+      `Identify the criteria for a successful real-life application of ${focus}. (Bloom’s Taxonomy: Remembering)`,
+      `Evaluate possible responses to an authentic challenge about ${focus} and justify the most appropriate choice with evidence. (Bloom’s Taxonomy: Evaluating)`,
+      `Create and present a product, performance, or solution related to ${focus} that meets at least four out of five rubric criteria. (Bloom’s Taxonomy: Creating)`,
+    ],
+  ];
+  return objectiveSets[session];
+}
+
+function tagalogObjectives(session: number, focus: string) {
+  const objectiveSets = [
+    [
+      `Tukuyin ang mahahalagang konsepto at halimbawa na kaugnay ng ${focus} nang may hindi bababa sa 80% kawastuhan. (Antas ng Bloom’s Taxonomy: Pag-alala)`,
+      `Ipaliwanag sa sariling salita ang ugnayan at kahalagahan ng mahahalagang ideya tungkol sa ${focus}. (Antas ng Bloom’s Taxonomy: Pag-unawa)`,
+      `Uriin ang mga halimbawang kaugnay ng ${focus} ayon sa napagkasunduang pamantayan, na may hindi bababa sa tatlo sa apat na wastong sagot. (Antas ng Bloom’s Taxonomy: Paglalapat)`,
+    ],
+    [
+      `Tukuyin ang mahahalagang katangian ng mga halimbawang kaugnay ng ${focus} nang may hindi bababa sa 80% kawastuhan. (Antas ng Bloom’s Taxonomy: Pag-alala)`,
+      `Paghambingin ang dalawang halimbawang kaugnay ng ${focus} at ipaliwanag ang hindi bababa sa dalawang pagkakatulad o pagkakaiba gamit ang ebidensiya. (Antas ng Bloom’s Taxonomy: Pagsusuri)`,
+      `Ilapat ang napagkasunduang pamantayan sa pag-aayos o pag-uuri ng mga bagong halimbawang kaugnay ng ${focus}. (Antas ng Bloom’s Taxonomy: Paglalapat)`,
+    ],
+    [
+      `Ilarawan ang wastong mga hakbang at pamantayan sa kaligtasan o kalidad sa paglalapat ng ${focus}. (Antas ng Bloom’s Taxonomy: Pag-unawa)`,
+      `Ipaliwanag kung bakit mahalaga ang bawat pangunahing hakbang o pamantayan sa wasto at responsableng pagganap. (Antas ng Bloom’s Taxonomy: Pag-unawa)`,
+      `Ipakita o isagawa ang kasanayang kaugnay ng ${focus} nang natutugunan ang hindi bababa sa apat sa limang pamantayan sa checklist. (Antas ng Bloom’s Taxonomy: Paglalapat)`,
+    ],
+    [
+      `Tukuyin ang mga pamantayan para sa matagumpay na paggamit ng ${focus} sa tunay na buhay. (Antas ng Bloom’s Taxonomy: Pag-alala)`,
+      `Suriin ang mga posibleng tugon sa isang tunay na hamon tungkol sa ${focus} at bigyang-katwiran ang pinakaangkop na pasya gamit ang ebidensiya. (Antas ng Bloom’s Taxonomy: Pagtataya)`,
+      `Lumikha at maglahad ng produkto, pagganap, o solusyong kaugnay ng ${focus} na natutugunan ang hindi bababa sa apat sa limang pamantayan sa rubric. (Antas ng Bloom’s Taxonomy: Paglikha)`,
+    ],
+  ];
+  return objectiveSets[session];
+}
+
 function englishFlow(session: number, focus: string, verb: string): LessonSession["flow"] {
   const flows: LessonSession["flow"][] = [
     {
@@ -151,11 +203,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
     if (tagalog) return {
       session: index + 1,
       day: ["LUNES", "MARTES", "MIYERKULES", "HUWEBES"][index],
-      objectives: [
-        `${verb.charAt(0).toUpperCase() + verb.slice(1)} ang mahahalagang konseptong kaugnay ng ${focus} nang may hindi bababa sa 80% kawastuhan.`,
-        `${index < 2 ? "Makumpleto ang ginabayang pagsusuri o pag-uuri" : "Mailapat ang aralin sa isang indibidwal o pangkatang gawaing pagganap"} gamit ang napagkasunduang pamantayan.`,
-        `Maipakita ang ${index % 2 ? "pananagutan at pakikipagtulungan" : "pagmamalasakit, pag-uusisa, at paggalang"} habang isinasagawa ang mga gawain.`,
-      ],
+      objectives: tagalogObjectives(index, focus),
       learnerContext: tagalogLearnerContext(index, focus, teacherContextNotes),
       preLesson: tagalogHooks[index],
       flow: tagalogFlow(index, focus, verb),
@@ -173,11 +221,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
     return {
       session: index + 1,
       day: days[index],
-      objectives: [
-        `${verb.charAt(0).toUpperCase() + verb.slice(1)} key concepts related to ${focus} with at least 80% accuracy.`,
-        `${index < 2 ? "Complete a guided classification or analysis task" : "Apply the lesson through an individual or collaborative performance task"} using the agreed criteria.`,
-        `Show ${index % 2 ? "responsibility and cooperation" : "care, curiosity, and respect"} while completing lesson activities.`,
-      ],
+      objectives: englishObjectives(index, focus),
       learnerContext: englishLearnerContext(index, focus, teacherContextNotes),
       preLesson: hooks[index],
       flow: englishFlow(index, focus, verb),
