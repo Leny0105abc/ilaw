@@ -25,7 +25,7 @@ function rows(plan: LessonPlan): Array<[string, ...ExportCell[]]> {
     [columnLabels.references, merged(plan.references)],
     [columnLabels.ai, merged(plan.aiDeclaration)],
     [columnLabels.intentions, merged(labels.intentionDescription)],
-    [columnLabels.competency, ...dayValues(plan, () => plan.competencyText)],
+    [columnLabels.competency, merged(plan.competencyText)],
     [columnLabels.objectives, ...dayValues(plan, (i) => plan.sessions[i].objectives.join("\n"))],
     [columnLabels.context, ...dayValues(plan, (i) => plan.sessions[i].learnerContext)],
     [columnLabels.experience, merged(learningExperienceDescription(plan.area))],
