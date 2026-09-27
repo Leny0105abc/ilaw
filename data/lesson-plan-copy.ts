@@ -33,6 +33,9 @@ const tagalogLabels = {
 };
 
 export function lessonPlanLabels(area: string) {
+  if (["Good Manners and Right Conduct", "GMRC"].includes(area)) {
+    return { ...tagalogLabels, lessonPlan: "LESSON PLAN" };
+  }
   return isTagalogLearningArea(area) ? tagalogLabels : englishLabels;
 }
 
