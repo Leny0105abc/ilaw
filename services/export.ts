@@ -2,7 +2,7 @@ import { AlignmentType, BorderStyle, Document, HeadingLevel, ImageRun, Packer, P
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { LessonPlan } from "@/types/lesson-plan";
-import { learningAreaLabel } from "@/data/curriculum";
+import { areaAbbreviation, learningAreaLabel } from "@/data/curriculum";
 import { assessmentDescription, learningExperienceDescription, lessonNameWithWeek, lessonPlanLabels, localizedPosition } from "@/data/lesson-plan-copy";
 
 const dayValues = <T,>(plan: LessonPlan, getter: (index: number) => T) => Array.from({ length: 4 }, (_, index) => index < plan.sessions.length ? getter(index) : ("" as T));
@@ -90,7 +90,7 @@ export async function exportDocx(plan: LessonPlan) {
     ] })] }),
   ] }] });
   const blob = await Packer.toBlob(doc);
-  download(blob, `${safe(plan.title)}-ILAW.docx`);
+  download(blob, `${exportFilename(plan)}.docx`);
 }
 
 export async function exportPdf(plan: LessonPlan) {
@@ -127,9 +127,15 @@ export async function exportPdf(plan: LessonPlan) {
   pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
   pdf.text(localizedPosition(plan.profile.position, plan.area), leftSignatureCenter, signatureY + 54, { align: "center" });
   pdf.text(localizedPosition(plan.profile.schoolHeadPosition, plan.area), rightSignatureCenter, signatureY + 54, { align: "center" });
-  pdf.save(`${safe(plan.title)}-ILAW.pdf`);
+  pdf.save(`${exportFilename(plan)}.pdf`);
 }
 
-function safe(value: string) { return value.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, ""); }
+function exportFilename(plan: LessonPlan) {
+  const learningArea = plan.area === "Good Manners and Right Conduct"
+    ? `GMRC${plan.grade}`
+    : `TLE${plan.grade}_${areaAbbreviation[plan.area]}`;
+  return safeFilename(`${learningArea}_${lessonNameWithWeek(plan.title, plan.week)}`);
+}
+function safeFilename(value: string) { return value.replace(/[<>:"/\\|?*\u0000-\u001F]/g, "").replace(/\s+/g, " ").replace(/[. ]+$/g, "").trim(); }
 function download(blob: Blob, filename: string) { const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 500); }
 async function imageDataUrl(url: string) { const blob = await fetch(url).then((response) => response.blob()); return new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(blob); }); }
