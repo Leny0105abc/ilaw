@@ -36,6 +36,10 @@ export function lessonPlanLabels(area: string) {
   return isTagalogLearningArea(area) ? tagalogLabels : englishLabels;
 }
 
+export function firstColumnLabels() {
+  return englishLabels;
+}
+
 export function learningExperienceDescription(area: string) {
   return isTagalogLearningArea(area) ? TAGALOG_LEARNING_EXPERIENCE_DESCRIPTION : LEARNING_EXPERIENCE_DESCRIPTION;
 }

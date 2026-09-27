@@ -3,7 +3,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { LessonPlan } from "@/types/lesson-plan";
 import { areaAbbreviation, learningAreaLabel } from "@/data/curriculum";
-import { assessmentDescription, learningExperienceDescription, lessonNameWithWeek, lessonPlanLabels, localizedPosition } from "@/data/lesson-plan-copy";
+import { assessmentDescription, firstColumnLabels, learningExperienceDescription, lessonNameWithWeek, lessonPlanLabels, localizedPosition } from "@/data/lesson-plan-copy";
 
 const dayValues = <T,>(plan: LessonPlan, getter: (index: number) => T) => Array.from({ length: 4 }, (_, index) => index < plan.sessions.length ? getter(index) : ("" as T));
 const text = (value: unknown) => String(value ?? "");
@@ -15,34 +15,35 @@ function centered(content: string): ExportCell { return { content, styles: { hal
 
 function rows(plan: LessonPlan): Array<[string, ...ExportCell[]]> {
   const labels = lessonPlanLabels(plan.area);
+  const columnLabels = firstColumnLabels();
   return [
-    [labels.name, merged(lessonNameWithWeek(plan.title, plan.week))],
-    [labels.area, merged(learningAreaLabel(plan.grade, plan.area))],
-    [labels.teacher, merged(plan.profile.teacherName)],
-    [labels.gradeSection, merged(`${labels.gradeWord} ${plan.grade} - ${plan.section}`)],
-    [labels.sessions, ...dayValues(plan, (i) => centered(`${labels.session} ${i + 1}`))],
-    [labels.references, merged(plan.references)],
-    [labels.ai, merged(plan.aiDeclaration)],
-    [labels.intentions, merged(labels.intentionDescription)],
-    [labels.competency, ...dayValues(plan, () => plan.competencyText)],
-    [labels.objectives, ...dayValues(plan, (i) => plan.sessions[i].objectives.join("\n"))],
-    [labels.context, ...dayValues(plan, (i) => plan.sessions[i].learnerContext)],
-    [labels.experience, merged(learningExperienceDescription(plan.area))],
-    [labels.preLesson, ...dayValues(plan, (i) => plan.sessions[i].preLesson)],
-    [labels.flow, ...dayValues(plan, (i) => `${labels.flowParts[0]}: ${plan.sessions[i].flow.iDo}\n\n${labels.flowParts[1]}: ${plan.sessions[i].flow.weDo}\n\n${labels.flowParts[2]}: ${plan.sessions[i].flow.youDo}\n\n${labels.flowParts[3]}: ${plan.sessions[i].flow.synthesis}`)],
-    [labels.resources, ...dayValues(plan, (i) => plan.sessions[i].resources.join(", "))],
-    [labels.integration, ...dayValues(plan, (i) => plan.sessions[i].integration)],
-    [labels.assessment, merged(assessmentDescription(plan.area))],
-    [labels.formative, ...dayValues(plan, (i) => plan.sessions[i].assessment)],
-    [labels.waysForward, merged(labels.waysDescription)],
-    [labels.extended, ...dayValues(plan, (i) => plan.sessions[i].extendedLearning)],
-    [labels.reflections, ...dayValues(plan, (i) => plan.sessions[i].reflection)],
+    [columnLabels.name, merged(lessonNameWithWeek(plan.title, plan.week))],
+    [columnLabels.area, merged(learningAreaLabel(plan.grade, plan.area))],
+    [columnLabels.teacher, merged(plan.profile.teacherName)],
+    [columnLabels.gradeSection, merged(`${labels.gradeWord} ${plan.grade} - ${plan.section}`)],
+    [columnLabels.sessions, ...dayValues(plan, (i) => centered(`${labels.session} ${i + 1}`))],
+    [columnLabels.references, merged(plan.references)],
+    [columnLabels.ai, merged(plan.aiDeclaration)],
+    [columnLabels.intentions, merged(labels.intentionDescription)],
+    [columnLabels.competency, ...dayValues(plan, () => plan.competencyText)],
+    [columnLabels.objectives, ...dayValues(plan, (i) => plan.sessions[i].objectives.join("\n"))],
+    [columnLabels.context, ...dayValues(plan, (i) => plan.sessions[i].learnerContext)],
+    [columnLabels.experience, merged(learningExperienceDescription(plan.area))],
+    [columnLabels.preLesson, ...dayValues(plan, (i) => plan.sessions[i].preLesson)],
+    [columnLabels.flow, ...dayValues(plan, (i) => `${labels.flowParts[0]}: ${plan.sessions[i].flow.iDo}\n\n${labels.flowParts[1]}: ${plan.sessions[i].flow.weDo}\n\n${labels.flowParts[2]}: ${plan.sessions[i].flow.youDo}\n\n${labels.flowParts[3]}: ${plan.sessions[i].flow.synthesis}`)],
+    [columnLabels.resources, ...dayValues(plan, (i) => plan.sessions[i].resources.join(", "))],
+    [columnLabels.integration, ...dayValues(plan, (i) => plan.sessions[i].integration)],
+    [columnLabels.assessment, merged(assessmentDescription(plan.area))],
+    [columnLabels.formative, ...dayValues(plan, (i) => plan.sessions[i].assessment)],
+    [columnLabels.waysForward, merged(labels.waysDescription)],
+    [columnLabels.extended, ...dayValues(plan, (i) => plan.sessions[i].extendedLearning)],
+    [columnLabels.reflections, ...dayValues(plan, (i) => plan.sessions[i].reflection)],
   ];
 }
 
 function splitRows(plan: LessonPlan) {
   const allRows = rows(plan);
-  const assessmentIndex = allRows.findIndex((row) => row[0] === lessonPlanLabels(plan.area).assessment);
+  const assessmentIndex = allRows.findIndex((row) => row[0] === firstColumnLabels().assessment);
   return [allRows.slice(0, assessmentIndex), allRows.slice(assessmentIndex)] as const;
 }
 
