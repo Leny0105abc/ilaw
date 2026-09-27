@@ -26,6 +26,18 @@ const tagalogHooks = [
   "Pagsusuri ng sitwasyon: Tukuyin ng mga mag-aaral kung ano ang wasto, responsable, o angkop sa isang maikling sitwasyon sa tunay na buhay.",
 ];
 const tagalogActionVerbs = ["tukuyin at ipaliwanag", "uriin at paghambingin", "ipakita at isabuhay", "suriin at ipahayag"];
+const englishResourceSets = [
+  ["PowerPoint presentation", "flashcards", "pictures/images", "textbooks or modules"],
+  ["video clips", "charts/diagrams", "graphic organizers", "worksheets"],
+  ["activity sheets", "real objects", "ICT tools", "assessment materials"],
+  ["online resources", "PowerPoint presentation", "graphic organizers", "assessment materials"],
+];
+const tagalogResourceSets = [
+  ["presentasyong PowerPoint", "mga flashcard", "mga larawan", "mga aklat-aralin o modyul"],
+  ["mga bidyo", "mga tsart/dayagram", "mga graphic organizer", "mga worksheet"],
+  ["mga activity sheet", "mga tunay na bagay", "mga kagamitang ICT", "mga kagamitang pantaya"],
+  ["mga online na sanggunian", "presentasyong PowerPoint", "mga graphic organizer", "mga kagamitang pantaya"],
+];
 
 function englishFlow(session: number, focus: string, verb: string): LessonSession["flow"] {
   const flows: LessonSession["flow"][] = [
@@ -130,13 +142,12 @@ export function generateLessonPlan(input: Input): LessonPlan {
   const competencyText = input.competencies.map((item) => item.text).join("\n");
   const focus = input.topic.trim() || focusText(input.competencies[0]?.text || "the selected competency");
   const title = lessonNameFromCompetency(input.competencies[0]);
-  const resources = input.availableResources.trim()
-    ? input.availableResources.split(",").map((item) => item.trim()).filter(Boolean)
-    : tagalog ? ["PowerPoint o nakalimbag na biswal", "mga gawaing papel", "mga kard na may larawan o salita", "mga kagamitang makikita sa paaralan o tahanan"] : ["PowerPoint or printed visual aids", "activity sheets", "picture/word cards", "available real objects or tools"];
+  const providedResources = input.availableResources.split(",").map((item) => item.trim()).filter(Boolean);
   const teacherContextNotes = input.learnerContext.trim();
 
   const sessions: LessonSession[] = Array.from({ length: input.sessions }, (_, index) => {
     const verb = (tagalog ? tagalogActionVerbs : actionVerbs)[index];
+    const resources = providedResources.length ? providedResources : (tagalog ? tagalogResourceSets : englishResourceSets)[index];
     if (tagalog) return {
       session: index + 1,
       day: ["LUNES", "MARTES", "MIYERKULES", "HUWEBES"][index],
