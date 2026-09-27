@@ -10,3 +10,4 @@
 .paper footer{gap:8rem;margin:22px 36px 0}.paper footer .signature-block{display:flex;flex-direction:column}.paper footer .signature-label{align-self:center;text-align:center}.paper footer strong{margin-top:28px;text-align:center;text-decoration:none;font-size:9px}.paper footer .signature-block>span:last-child{text-align:center}
 .paper footer{grid-template-columns:repeat(2,minmax(0,1fr));justify-content:space-between;gap:5rem;margin:22px 14px 0}.paper footer .signature-block{width:100%;min-width:0}.paper .session-row td{text-align:center;vertical-align:middle;font-weight:700}
 .lesson-document{display:grid;gap:1rem}.paper.page-two{min-height:538px}.continuation-header{padding:4px 0 10px}.continuation-header h2{margin:0}.lesson-document .paper{margin:auto}@media print{.lesson-document{display:block}.lesson-document .paper+.paper{break-before:page;page-break-before:always}.paper.page-two{min-height:0}}
+.flow-cell .flow-step{display:block;margin:0 0 4px}
