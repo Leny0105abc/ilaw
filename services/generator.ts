@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Competency, GradeLevel, LessonPlan, LessonSession, TeacherProfile, Term } from "@/types/lesson-plan";
+import { isTagalogLearningArea } from "@/data/lesson-plan-copy";
 
 const sessionSchema = z.object({
   session: z.number(), day: z.string(), objectives: z.array(z.string()).length(3), learnerContext: z.string(),
@@ -18,6 +19,13 @@ const hooks = [
 ];
 
 const actionVerbs = ["identify and explain", "classify and compare", "demonstrate and apply", "evaluate and communicate"];
+const tagalogHooks = [
+  "Pagsusuri ng larawan: Pag-aralan ng mga mag-aaral ang tatlong larawang kaugnay ng aralin at magbahagi ng isang obserbasyon at isang tanong.",
+  "Tama o Mali: Tumugon ang mga mag-aaral sa limang pahayag at ipaliwanag sa kapareha ang batayan ng isang sagot.",
+  "Mabilisang pag-uuri: Pagpangkat-pangkatin ng mga pares ang mga kard na may larawan o salita at ipaliwanag ang ginamit na batayan.",
+  "Pagsusuri ng sitwasyon: Tukuyin ng mga mag-aaral kung ano ang wasto, responsable, o angkop sa isang maikling sitwasyon sa tunay na buhay.",
+];
+const tagalogActionVerbs = ["tukuyin at ipaliwanag", "uriin at paghambingin", "ipakita at isabuhay", "suriin at ipahayag"];
 
 type Input = {
   grade: GradeLevel; area: Competency["area"]; term: Term; week: number; competencies: Competency[]; topic: string;
@@ -38,16 +46,39 @@ function lessonNameFromCompetency(competency: Competency | undefined) {
 }
 
 export function generateLessonPlan(input: Input): LessonPlan {
+  const tagalog = isTagalogLearningArea(input.area);
   const competencyText = input.competencies.map((item) => item.text).join("\n");
   const focus = input.topic.trim() || focusText(input.competencies[0]?.text || "the selected competency");
   const title = lessonNameFromCompetency(input.competencies[0]);
   const resources = input.availableResources.trim()
     ? input.availableResources.split(",").map((item) => item.trim()).filter(Boolean)
-    : ["PowerPoint or printed visual aids", "activity sheets", "picture/word cards", "available real objects or tools"];
+    : tagalog ? ["PowerPoint o nakalimbag na biswal", "mga gawaing papel", "mga kard na may larawan o salita", "mga kagamitang makikita sa paaralan o tahanan"] : ["PowerPoint or printed visual aids", "activity sheets", "picture/word cards", "available real objects or tools"];
 
   const sessions: LessonSession[] = Array.from({ length: input.sessions }, (_, index) => {
-    const verb = actionVerbs[index];
-    const support = input.learnerContext.trim() || "Learners bring varied prior experiences and benefit from clear models, visual examples, guided practice, and flexible oral or written responses.";
+    const verb = (tagalog ? tagalogActionVerbs : actionVerbs)[index];
+    const support = input.learnerContext.trim() || (tagalog ? "Ang mga mag-aaral ay may iba-ibang dating kaalaman at higit na natututo sa malinaw na halimbawa, biswal na gabay, ginabayang pagsasanay, at malayang pasalita o pasulat na pagsagot." : "Learners bring varied prior experiences and benefit from clear models, visual examples, guided practice, and flexible oral or written responses.");
+    if (tagalog) return {
+      session: index + 1,
+      day: ["LUNES", "MARTES", "MIYERKULES", "HUWEBES"][index],
+      objectives: [
+        `${verb.charAt(0).toUpperCase() + verb.slice(1)} ang mahahalagang konseptong kaugnay ng ${focus} nang may hindi bababa sa 80% kawastuhan.`,
+        `${index < 2 ? "Makumpleto ang ginabayang pagsusuri o pag-uuri" : "Mailapat ang aralin sa isang indibidwal o pangkatang gawaing pagganap"} gamit ang napagkasunduang pamantayan.`,
+        `Maipakita ang ${index % 2 ? "pananagutan at pakikipagtulungan" : "pagmamalasakit, pag-uusisa, at paggalang"} habang isinasagawa ang mga gawain.`,
+      ],
+      learnerContext: `${support} Sa Sesyon ${index + 1}, gagamit ng ${index < 2 ? "mga ginabayang halimbawa at biswal na pahiwatig" : "nakabalangkas na aplikasyon, tseklist, at suporta ng kapwa mag-aaral"} upang matugunan ang mga hamon sa pagbasa, tiwala sa sarili, o kakulangan sa kagamitan.`,
+      preLesson: tagalogHooks[index],
+      flow: {
+        iDo: `Ilahad ang mga layunin at iugnay ang aralin sa pamilyar na halimbawa sa tahanan, paaralan, o pamayanan. Ipakita kung paano ${verb} ang ${focus} gamit ang halimbawang may paliwanag at malinaw na pamantayan ng tagumpay.`,
+        weDo: `Gabayan ang mga mag-aaral sa dalawang halimbawa. Itanong: “Ano ang napansin mo?”, “Anong patunay ang sumusuporta sa iyong sagot?”, at “Paano ito magagamit sa tunay na buhay?” Suriin ang pag-unawa sa pamamagitan ng response cards, senyas ng kamay, o maikling pasalitang sagot.`,
+        youDo: `${index < 2 ? "Kumpletuhin ng mga pares ang maikling gawain sa pag-uuri, paglalagay ng label, o paghahambing" : "Kumpletuhin ng mga mag-aaral ang praktikal na aplikasyon o maikling presentasyon"}. Magbigay ng biswal na pahiwatig, talaan ng salita, at gabay sa maliit na pangkat kung kinakailangan; pahintulutan ang pasalita o pasulat na pagsagot.`,
+        synthesis: `Kumpletuhin ng mga mag-aaral ang pahayag: “Ang pinakamahalagang ideya tungkol sa ${focus} ay ___ dahil ___.” Linawin ng guro ang maling pagkaunawa at ihanda ang susunod na sesyon.`,
+      },
+      resources,
+      integration: `Filipino at GMRC: Gamitin ng mga mag-aaral ang wastong bokabularyo upang maipahayag ang kanilang pangangatwiran at maiugnay ang aralin sa responsable at makataong pagpapasya sa tahanan, paaralan, at pamayanan.`,
+      assessment: `Gumamit ng ${index < 2 ? "5-aytem na gawain sa pag-uuri o pagsusuri ng pag-unawa" : "maikling gawaing pagganap na may 4-puntong tseklist"} na nakaayon sa mga layunin ng sesyon. Tanggapin ang pasalita, pasulat, o aktuwal na pagpapakita; magbigay ng biswal na suporta, karagdagang gabay, at opsiyon para sa maliit na pangkat.`,
+      extendedLearning: `Sa tahanan o pamayanan, magmasid ng isang ligtas at walang-gastos na halimbawa na kaugnay ng ${focus}, itala o ilarawan ang napansin, at ibahagi ito sa susunod na klase. Maaaring tumulong ang isang kasapi ng pamilya.`,
+      reflection: `Natamo ba ng mga mag-aaral ang tatlong layunin para sa Sesyon ${index + 1}? Sino ang nangangailangan ng karagdagang suporta, anong maling pagkaunawa ang dapat muling talakayin, at ano ang dapat baguhin sa susunod na sesyon?`,
+    };
     return {
       session: index + 1,
       day: days[index],
@@ -81,7 +112,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
     term: input.term, week: input.week, schoolYear: input.schoolYear, classDuration: input.duration,
     competencyIds: input.competencies.map((item) => item.id), competencyText: validated.competency, topic: input.topic,
     references: Array.from(new Set(input.competencies.map((item) => item.source).filter(Boolean))).join("; ") || `Grade ${input.grade} Budget of Work`,
-    aiDeclaration: "AI was used to assist in organizing the lesson-plan structure, aligning objectives with the selected learning competency, improving wording, and suggesting learning activities and integration opportunities. The teacher reviewed and validated the generated content before use.",
+    aiDeclaration: tagalog ? "Ginamit ang AI upang tumulong sa pag-aayos ng estruktura ng banghay-aralin, pag-uugnay ng mga layunin sa napiling kasanayang pampagkatuto, pagpapahusay ng pananalita, at pagmumungkahi ng mga gawain at pagkakataon para sa integrasyon. Sinuri at pinagtibay ng guro ang nabuong nilalaman bago ito gamitin." : "AI was used to assist in organizing the lesson-plan structure, aligning objectives with the selected learning competency, improving wording, and suggesting learning activities and integration opportunities. The teacher reviewed and validated the generated content before use.",
     learnerNotes: input.learnerContext, availableResources: input.availableResources, teacherInstructions: input.instructions,
     status: "Draft", createdAt: now, updatedAt: now, profile: input.profile, sessions: validated.sessions,
   };
