@@ -1,5 +1,5 @@
 import { LessonPlan, TeacherProfile, defaultProfile } from "@/types/lesson-plan";
-import { defaultLearningResources } from "@/services/generator";
+import { cleanLearningObjective, defaultLearningResources } from "@/services/generator";
 
 const PLANS_KEY = "ilaw.lessonPlans.v1";
 const PROFILE_KEY = "ilaw.profile.v1";
@@ -11,12 +11,23 @@ export function loadPlans(): LessonPlan[] {
     let changed = false;
     const plans = stored.map((plan) => {
       const hasLegacyBeautyResources = plan.sessions.some((session) => session.resources.some((resource) => /available beauty care tools/i.test(resource)));
-      if (!hasLegacyBeautyResources) return plan;
+      let planChanged = hasLegacyBeautyResources;
+      const sessions = plan.sessions.map((session, index) => {
+        const objectives = session.objectives.map(cleanLearningObjective);
+        const objectivesChanged = objectives.some((objective, objectiveIndex) => objective !== session.objectives[objectiveIndex]);
+        if (objectivesChanged) planChanged = true;
+        return {
+          ...session,
+          objectives,
+          resources: hasLegacyBeautyResources ? defaultLearningResources(plan.area, index) : session.resources,
+        };
+      });
+      if (!planChanged) return plan;
       changed = true;
       return {
         ...plan,
-        availableResources: "",
-        sessions: plan.sessions.map((session, index) => ({ ...session, resources: defaultLearningResources(plan.area, index) })),
+        availableResources: hasLegacyBeautyResources ? "" : plan.availableResources,
+        sessions,
       };
     });
     if (changed) savePlans(plans);

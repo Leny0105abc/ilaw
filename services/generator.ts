@@ -44,6 +44,14 @@ export function defaultLearningResources(area: string, sessionIndex: number) {
   return [...sets[Math.min(sessionIndex, sets.length - 1)]];
 }
 
+export function cleanLearningObjective(objective: string) {
+  return objective
+    .replace(/\s*\((?:Bloom’s Taxonomy|Bloom's Taxonomy|Antas ng Bloom’s Taxonomy|Antas ng Bloom's Taxonomy):[^)]+\)\s*$/i, "")
+    .replace(/\s+with at least 80% accuracy/gi, "")
+    .replace(/\s+nang may hindi bababa sa 80% kawastuhan/gi, "")
+    .trim();
+}
+
 function englishObjectives(session: number, focus: string) {
   const objectiveSets = [
     [
@@ -67,7 +75,7 @@ function englishObjectives(session: number, focus: string) {
       `Create and present a product, performance, or solution related to ${focus} that meets at least four out of five rubric criteria. (Bloom’s Taxonomy: Creating)`,
     ],
   ];
-  return objectiveSets[session];
+  return objectiveSets[session].map(cleanLearningObjective);
 }
 
 function tagalogObjectives(session: number, focus: string) {
@@ -93,7 +101,7 @@ function tagalogObjectives(session: number, focus: string) {
       `Lumikha at maglahad ng produkto, pagganap, o solusyong kaugnay ng ${focus} na natutugunan ang hindi bababa sa apat sa limang pamantayan sa rubric. (Antas ng Bloom’s Taxonomy: Paglikha)`,
     ],
   ];
-  return objectiveSets[session];
+  return objectiveSets[session].map(cleanLearningObjective);
 }
 
 function englishFlow(session: number, focus: string, verb: string): LessonSession["flow"] {
