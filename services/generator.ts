@@ -87,6 +87,26 @@ function tagalogFlow(session: number, focus: string, verb: string): LessonSessio
   return flows[session];
 }
 
+function englishLearnerContext(session: number, focus: string, teacherNotes: string) {
+  const profiles = [
+    `Learners have introductory knowledge and everyday experiences related to ${focus}, but many may not yet recognize the topic’s essential concepts or vocabulary. They are interested in games, pictures, stories, and familiar examples, so the learning environment should provide visual prompts, short oral exchanges, and low-risk ways to share prior knowledge.`,
+    `Learners can recall the basic ideas introduced in the previous session and are beginning to identify examples related to ${focus}. They learn well through videos, demonstrations, guided classification, and comparison activities, although some need repeated modeling, a word bank, and partner support to recognize important characteristics accurately.`,
+    `Learners are ready to apply their understanding of ${focus} through collaborative and hands-on tasks. They are generally engaged when given clear roles and concrete materials, but some need step-by-step scaffolds, sentence starters, checklists, and feedback to explain their reasoning and perform the task with confidence.`,
+    `Learners show strong interest in authentic, real-life applications of ${focus} and are prepared to create, demonstrate, or present what they have learned. They benefit from choice and peer collaboration, but still require clear safety expectations, teacher supervision, accessible resources, and structured reflection during culminating or field-based activities.`,
+  ];
+  return `${profiles[session]}${teacherNotes ? ` Teacher-provided learner information to consider: ${teacherNotes}` : ""}`;
+}
+
+function tagalogLearnerContext(session: number, focus: string, teacherNotes: string) {
+  const profiles = [
+    `Ang mga mag-aaral ay may panimulang kaalaman at karanasang pang-araw-araw na kaugnay ng ${focus}, ngunit marami ang hindi pa nakikilala ang mahahalagang konsepto at bokabularyo nito. Nahihikayat sila ng laro, larawan, kuwento, at pamilyar na halimbawa, kaya kailangan ang biswal na pahiwatig, maikling talakayan, at ligtas na pagkakataong maibahagi ang dating kaalaman.`,
+    `Ang mga mag-aaral ay nakaaalala sa mga batayang ideyang tinalakay sa nakaraang sesyon at nagsisimula nang tumukoy ng mga halimbawang kaugnay ng ${focus}. Mas nauunawaan nila ang aralin sa pamamagitan ng bidyo, demonstrasyon, ginabayang pag-uuri, at paghahambing, ngunit ang ilan ay nangangailangan ng paulit-ulit na pagmomodelo, talaan ng salita, at suporta ng kapareha.`,
+    `Ang mga mag-aaral ay handa nang ilapat ang kanilang pag-unawa sa ${focus} sa kolaboratibo at praktikal na gawain. Aktibo sila kapag malinaw ang tungkulin at kongkreto ang kagamitan, ngunit ang ilan ay nangangailangan ng sunod-sunod na gabay, panimulang pangungusap, checklist, at puna upang malinaw na maipaliwanag ang konsepto at maisagawa ang gawain.`,
+    `Ang mga mag-aaral ay lubos na interesado sa makatotohanang aplikasyon ng ${focus} at handa nang lumikha, magpakita, o maglahad ng kanilang natutuhan. Nakikinabang sila sa pagpili at pakikipagtulungan, ngunit kailangan pa rin ang malinaw na panuntunan sa kaligtasan, superbisyon ng guro, madaling gamiting kagamitan, at nakabalangkas na pagninilay.`,
+  ];
+  return `${profiles[session]}${teacherNotes ? ` Karagdagang impormasyong ibinigay ng guro na dapat isaalang-alang: ${teacherNotes}` : ""}`;
+}
+
 type Input = {
   grade: GradeLevel; area: Competency["area"]; term: Term; week: number; competencies: Competency[]; topic: string;
   sessions: number; learnerContext: string; duration: number; availableResources: string; instructions: string; profile: TeacherProfile; section: string; schoolYear: string;
@@ -113,10 +133,10 @@ export function generateLessonPlan(input: Input): LessonPlan {
   const resources = input.availableResources.trim()
     ? input.availableResources.split(",").map((item) => item.trim()).filter(Boolean)
     : tagalog ? ["PowerPoint o nakalimbag na biswal", "mga gawaing papel", "mga kard na may larawan o salita", "mga kagamitang makikita sa paaralan o tahanan"] : ["PowerPoint or printed visual aids", "activity sheets", "picture/word cards", "available real objects or tools"];
+  const teacherContextNotes = input.learnerContext.trim();
 
   const sessions: LessonSession[] = Array.from({ length: input.sessions }, (_, index) => {
     const verb = (tagalog ? tagalogActionVerbs : actionVerbs)[index];
-    const support = input.learnerContext.trim() || (tagalog ? "Ang mga mag-aaral ay may iba-ibang dating kaalaman at higit na natututo sa malinaw na halimbawa, biswal na gabay, ginabayang pagsasanay, at malayang pasalita o pasulat na pagsagot." : "Learners bring varied prior experiences and benefit from clear models, visual examples, guided practice, and flexible oral or written responses.");
     if (tagalog) return {
       session: index + 1,
       day: ["LUNES", "MARTES", "MIYERKULES", "HUWEBES"][index],
@@ -125,7 +145,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
         `${index < 2 ? "Makumpleto ang ginabayang pagsusuri o pag-uuri" : "Mailapat ang aralin sa isang indibidwal o pangkatang gawaing pagganap"} gamit ang napagkasunduang pamantayan.`,
         `Maipakita ang ${index % 2 ? "pananagutan at pakikipagtulungan" : "pagmamalasakit, pag-uusisa, at paggalang"} habang isinasagawa ang mga gawain.`,
       ],
-      learnerContext: `${support} Sa Sesyon ${index + 1}, gagamit ng ${index < 2 ? "mga ginabayang halimbawa at biswal na pahiwatig" : "nakabalangkas na aplikasyon, tseklist, at suporta ng kapwa mag-aaral"} upang matugunan ang mga hamon sa pagbasa, tiwala sa sarili, o kakulangan sa kagamitan.`,
+      learnerContext: tagalogLearnerContext(index, focus, teacherContextNotes),
       preLesson: tagalogHooks[index],
       flow: tagalogFlow(index, focus, verb),
       resources,
@@ -142,7 +162,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
         `${index < 2 ? "Complete a guided classification or analysis task" : "Apply the lesson through an individual or collaborative performance task"} using the agreed criteria.`,
         `Show ${index % 2 ? "responsibility and cooperation" : "care, curiosity, and respect"} while completing lesson activities.`,
       ],
-      learnerContext: `${support} Session ${index + 1} uses ${index < 2 ? "guided examples and visual prompts" : "structured application with checklists and peer support"} to address possible reading, confidence, or resource barriers.`,
+      learnerContext: englishLearnerContext(index, focus, teacherContextNotes),
       preLesson: hooks[index],
       flow: englishFlow(index, focus, verb),
       resources,
