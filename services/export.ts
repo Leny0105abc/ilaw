@@ -78,12 +78,12 @@ export async function exportDocx(plan: LessonPlan) {
     new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [1850, 1900, 1900, 1900, 1900], rows: tableRows(pageTwoRows) }),
     new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [4750, 4750], rows: [new TableRow({ children: [
       new TableCell({ borders: { top:noBorder,bottom:noBorder,left:noBorder,right:noBorder }, children: [
-        new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: labels.preparedBy, size: 18 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 240 }, children: [new TextRun({ text: labels.preparedBy, size: 18 })] }),
         new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 360 }, children: [new TextRun({ text: plan.profile.teacherName, bold: true, size: 19 })] }),
         new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: localizedPosition(plan.profile.position, plan.area), size: 18 })] }),
       ] }),
       new TableCell({ borders: { top:noBorder,bottom:noBorder,left:noBorder,right:noBorder }, children: [
-        new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: labels.reviewedBy, size: 18 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 240 }, children: [new TextRun({ text: labels.reviewedBy, size: 18 })] }),
         new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 360 }, children: [new TextRun({ text: plan.profile.schoolHead, bold: true, size: 19 })] }),
         new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: localizedPosition(plan.profile.schoolHeadPosition, plan.area), size: 18 })] }),
       ] }),
@@ -119,8 +119,8 @@ export async function exportPdf(plan: LessonPlan) {
   const signatureColumnWidth = signatureWidth / 2;
   const leftSignatureCenter = signatureLeft + signatureColumnWidth / 2;
   const rightSignatureCenter = signatureLeft + signatureColumnWidth + signatureColumnWidth / 2;
-  pdf.text(labels.preparedBy, signatureLeft, signatureY);
-  pdf.text(labels.reviewedBy, signatureLeft + signatureColumnWidth, signatureY);
+  pdf.text(labels.preparedBy, leftSignatureCenter, signatureY, { align: "center" });
+  pdf.text(labels.reviewedBy, rightSignatureCenter, signatureY, { align: "center" });
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(10);
   pdf.text(plan.profile.teacherName, leftSignatureCenter, signatureY + 40, { align: "center" });
   pdf.text(plan.profile.schoolHead, rightSignatureCenter, signatureY + 40, { align: "center" });
