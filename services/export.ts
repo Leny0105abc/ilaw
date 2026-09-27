@@ -52,9 +52,8 @@ export async function exportDocx(plan: LessonPlan) {
   const border = { style: BorderStyle.SINGLE, size: 4, color: "64748B" };
   const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
   const [pageOneRows, pageTwoRows] = splitRows(plan);
-  const tableRows = (contentRows: Array<[string, ...ExportCell[]]>) => [
-    new TableRow({ children: ["", ...labels.days].map((item) => new TableCell({ borders: { top:border,bottom:border,left:border,right:border }, shading: { fill: item ? "DDE8F8" : "FFFFFF" }, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: item, bold: true, size: 16 })] })] })) }),
-    ...contentRows.map((row) => new TableRow({
+  const tableRows = (contentRows: Array<[string, ...ExportCell[]]>) =>
+    contentRows.map((row) => new TableRow({
       cantSplit: true,
       children: row.map((item, index) => {
         const value = typeof item === "string" ? item : item.content;
@@ -65,8 +64,7 @@ export async function exportDocx(plan: LessonPlan) {
           children: text(value).split("\n").map((line) => new Paragraph({ alignment: typeof item !== "string" && item.styles?.halign === "center" ? AlignmentType.CENTER : undefined, spacing: { after: 40 }, children: [new TextRun({ text: line, bold: index === 0 || (typeof item !== "string" && item.styles?.halign === "center"), size: 15 })] })),
         });
       }),
-    })),
-  ];
+    }));
   const doc = new Document({ sections: [{ properties: { page: { size: { orientation: PageOrientation.LANDSCAPE }, margin: { top: 280, right: 280, bottom: 280, left: 280 } } }, children: [
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new ImageRun({ data: logoData, transformation: { width: 54, height: 54 }, type: "png" })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: labels.republic, size: 18 })] }),
@@ -105,11 +103,11 @@ export async function exportPdf(plan: LessonPlan) {
   pdf.setFont("helvetica", "normal"); pdf.text(`${plan.profile.region} | ${plan.profile.division} | ${plan.profile.district}`, 421, 102, { align: "center" });
   pdf.text(`${plan.profile.school} - ${plan.profile.location}`, 421, 115, { align: "center" });
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(12); pdf.text(labels.lessonPlan, 421, 132, { align: "center" });
-  const tableOptions = { theme: "grid" as const, styles: { fontSize: 5.6, cellPadding: 2.4, valign: "top" as const, lineColor: [100,116,139] as [number,number,number], lineWidth: .3 }, headStyles: { fillColor: [23,63,138] as [number,number,number], textColor: 255, halign: "center" as const }, columnStyles: { 0: { fillColor: [238,243,249] as [number,number,number], fontStyle: "bold" as const, cellWidth: 106 } }, margin: { left: 16, right: 16 } };
-  autoTable(pdf, { startY: 142, head: [["", ...labels.days]], body: pageOneRows, ...tableOptions });
+  const tableOptions = { theme: "grid" as const, styles: { fontSize: 5.6, cellPadding: 2.4, valign: "top" as const, lineColor: [100,116,139] as [number,number,number], lineWidth: .3 }, columnStyles: { 0: { fillColor: [238,243,249] as [number,number,number], fontStyle: "bold" as const, cellWidth: 106 } }, margin: { left: 16, right: 16 } };
+  autoTable(pdf, { startY: 142, body: pageOneRows, ...tableOptions });
   pdf.addPage("a4", "landscape");
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(12); pdf.text(`${labels.lessonPlan} – ${labels.continuation}`, 421, 28, { align: "center" });
-  autoTable(pdf, { startY: 38, head: [["", ...labels.days]], body: pageTwoRows, ...tableOptions });
+  autoTable(pdf, { startY: 38, body: pageTwoRows, ...tableOptions });
   const finalTableY = (pdf as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 460;
   let signatureY = finalTableY + 24;
   if (signatureY > 515) { pdf.addPage("a4", "landscape"); signatureY = 36; }
