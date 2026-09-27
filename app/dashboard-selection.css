@@ -36,6 +36,15 @@
   cursor: pointer;
 }
 
+.paper ol {
+  margin: 0;
+  padding-left: 14px;
+}
+
+.paper ol li {
+  margin-bottom: 2px;
+}
+
 @media (max-width: 1100px) {
   .library-head {
     align-items: flex-start;
