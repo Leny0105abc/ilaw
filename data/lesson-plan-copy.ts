@@ -6,6 +6,8 @@ export const TAGALOG_LEARNING_EXPERIENCE_DESCRIPTION = "Ang karanasan sa pagkatu
 
 export const TAGALOG_ASSESSMENT_DESCRIPTION = "Ipinakikita ng mga pagtataya kung ano ang natutuhan ng mga mag-aaral at kung saan pa nila kailangan ng tulong. Nakatutulong ang mga ito sa pagbibigay sa iyo ng impormasyong gagabay sa iyong susunod na pagtuturo sa buong sesyon.";
 
+export const FLOW_GUIDANCE = "Flow:\nBriefly describe the learning activities for one or more sessions. Make the objectives clear, guide learners before independent work, provide examples and feedback, and move from supported to independent performance.";
+
 export function isTagalogLearningArea(area: string) {
   return ["Good Manners and Right Conduct", "Filipino", "Araling Panlipunan"].includes(area);
 }
@@ -15,7 +17,7 @@ const englishLabels = {
   days: ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY"], session: "SESSION", gradeWord: "GRADE",
   name: "Name of Lesson", area: "Learning Area/s", teacher: "Designed by Teacher/s", gradeSection: "Designed for which Grade Level and Section", sessions: "No. of Sessions", references: "References", ai: "Declaration of AI use",
   intentions: "INTENTIONS", competency: "Learning Competency", objectives: "Learning Objectives", context: "Learner Context",
-  experience: "LEARNING EXPERIENCE", preLesson: "Pre-Lesson", flow: "Flow", resources: "Learning Resources", integration: "Opportunities for integration",
+  experience: "LEARNING EXPERIENCE", preLesson: "Pre-Lesson", flow: FLOW_GUIDANCE, resources: "Learning Resources", integration: "Opportunities for integration",
   assessment: "ASSESSMENT", formative: "Formative Assessment", waysForward: "WAYS FORWARD", extended: "Extended learning opportunities", reflections: "Reflections",
   intentionDescription: "Meaningful learning experiences are anchored in clear, relevant intentions.", waysDescription: "Learning continues through reflection and realistic experiences beyond class.",
   preparedBy: "Prepared by:", reviewedBy: "Checked and Reviewed by:", flowParts: ["I DO", "WE DO", "YOU DO", "SYNTHESIS"],

@@ -240,13 +240,16 @@ export function generateLessonPlan(input: Input): LessonPlan {
 
   const sessions: LessonSession[] = Array.from({ length: input.sessions }, (_, index) => {
     const resources = providedResources.length ? providedResources : defaultLearningResources(input.area, index);
+    const objectives = tagalog ? tagalogObjectives(index, focus) : englishObjectives(index, focus);
+    const learnerContext = tagalog ? tagalogLearnerContext(index, focus, teacherContextNotes) : englishLearnerContext(index, focus, teacherContextNotes);
+    const flowContext = { objectives, learnerContext, resources, sessionCount: input.sessions };
     if (tagalog) return {
       session: index + 1,
       day: ["LUNES", "MARTES", "MIYERKULES", "HUWEBES"][index],
-      objectives: tagalogObjectives(index, focus),
-      learnerContext: tagalogLearnerContext(index, focus, teacherContextNotes),
+      objectives,
+      learnerContext,
       preLesson: tagalogPreLesson(index, focus),
-      flow: { steps: buildLessonFlow(input.flowFormat, index, focus, true) },
+      flow: { steps: buildLessonFlow(input.flowFormat, index, focus, true, flowContext) },
       resources,
       integration: `Filipino at GMRC: Gamitin ng mga mag-aaral ang wastong bokabularyo upang maipahayag ang kanilang pangangatwiran at maiugnay ang aralin sa responsable at makataong pagpapasya sa tahanan, paaralan, at pamayanan.`,
       assessment: [
@@ -261,10 +264,10 @@ export function generateLessonPlan(input: Input): LessonPlan {
     return {
       session: index + 1,
       day: days[index],
-      objectives: englishObjectives(index, focus),
-      learnerContext: englishLearnerContext(index, focus, teacherContextNotes),
+      objectives,
+      learnerContext,
       preLesson: englishPreLesson(index, focus),
-      flow: { steps: buildLessonFlow(input.flowFormat, index, focus, false) },
+      flow: { steps: buildLessonFlow(input.flowFormat, index, focus, false, flowContext) },
       resources,
       integration: index % 2 === 0
         ? `English: learners use lesson-specific vocabulary to explain evidence and communicate a clear conclusion during paired discussion.`

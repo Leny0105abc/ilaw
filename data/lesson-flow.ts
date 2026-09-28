@@ -42,65 +42,95 @@ const stageMap: Record<LessonFlowFormat, CoreStage[]> = {
   ppp: ["explain", "explore", "elaborate"],
 };
 
-function englishContent(stage: CoreStage, session: number, focus: string) {
-  const sessionWork = ["the meaning of essential terms and familiar examples", "evidence from a video, benchmark examples, and important characteristics", "selected examples, their characteristics, and correct procedures", "a real-life application and a culminating solution or performance"][session];
-  const learnerGoal = ["define essential terms and identify appropriate examples", "compare examples and identify benchmark characteristics", "explain selected examples, characteristics, and correct procedures", "apply the learning to a real-life challenge and justify a solution"][session];
-  const guidedActivity = ["guided vocabulary-and-picture sort", "guided video evidence table and benchmarking activity", "guided characteristics-and-procedure analysis", "guided case-planning conference"][session];
-  const independentActivity = ["individual vocabulary map with examples", "individual comparison based on a new video clip or example", "individual explanation or demonstration using a checklist", "real-life solution, product, or performance using the shared rubric"][session];
-  const activityLaunch = [
-    `Present and define essential words related to ${focus} using pictures and familiar examples.`,
-    `Show a short educational video or demonstration about ${focus} and provide guide questions for benchmarking.`,
-    `Present selected examples related to ${focus} and ask learners to notice their characteristics, purpose, procedure, or safety features.`,
-    `Present a realistic home, school, or community situation that requires learners to apply ${focus}.`,
-  ][session];
+export type LessonFlowContext = {
+  objectives: string[];
+  learnerContext: string;
+  resources: string[];
+  sessionCount: number;
+};
+
+type FlowDetails = {
+  objective: string;
+  sessionWork: string;
+  guidedActivity: string;
+  independentActivity: string;
+  check: string;
+  resources: string;
+  support: string;
+};
+
+function phaseIndex(session: number, sessionCount: number) {
+  if (sessionCount <= 1) return 0;
+  return Math.round((session * 3) / (sessionCount - 1));
+}
+
+function learnerSupport(context: string, tagalog: boolean) {
+  const value = context.toLowerCase();
+  if (value.includes("struggling readers") || value.includes("nahihirapang bumasa")) return tagalog ? "Gumamit ng larawan at word bank." : "Use picture cues and a word bank.";
+  if (value.includes("limited internet") || value.includes("limitadong internet")) return tagalog ? "Gumamit ng nakalimbag at offline na kagamitan." : "Use printed and offline materials.";
+  if (value.includes("large class") || value.includes("malaking klase")) return tagalog ? "Magtalaga ng tungkulin sa pares at gumamit ng checklist." : "Assign pair roles and use a checklist.";
+  if (value.includes("low participation") || value.includes("mababang pakikilahok")) return tagalog ? "Gumamit ng think-pair-share at sentence starter." : "Use think-pair-share and sentence starters.";
+  return tagalog ? "Magbigay ng gabay na tanong at maikling puna." : "Provide guide questions and brief feedback.";
+}
+
+function flowDetails(session: number, focus: string, tagalog: boolean, context: LessonFlowContext): FlowDetails {
+  const phase = phaseIndex(session, context.sessionCount);
+  const singleSession = context.sessionCount === 1;
+  const resources = context.resources.slice(0, 2).join(tagalog ? " at " : " and ") || (tagalog ? "mga larawan at activity sheet" : "pictures and an activity sheet");
+  const objective = (context.objectives[0] || (tagalog ? `Maunawaan at mailapat ang ${focus}` : `Understand and apply ${focus}`)).replace(/\.$/, "");
+  const englishWork = ["essential terms and familiar examples", "video examples and benchmark characteristics", "selected examples, characteristics, and procedures", "a real-life application of the competency"];
+  const tagalogWork = ["mahahalagang salita at pamilyar na halimbawa", "mga halimbawa sa bidyo at batayang katangian", "mga piling halimbawa, katangian, at pamamaraan", "tunay na aplikasyon ng kasanayan"];
+  const englishGuided = ["vocabulary-and-picture sort", "video evidence table", "characteristics-and-procedure analysis", "case-planning task"];
+  const tagalogGuided = ["pag-uuri ng salita at larawan", "video evidence table", "pagsusuri ng katangian at pamamaraan", "pagpaplano batay sa isang kaso"];
+  const englishIndependent = ["a short concept map", "a comparison of a new example", "an explanation or demonstration", "a practical solution or performance"];
+  const tagalogIndependent = ["maikling concept map", "paghahambing ng bagong halimbawa", "paliwanag o demonstrasyon", "praktikal na solusyon o pagganap"];
+  const englishCheck = ["vocabulary exit check", "evidence comparison", "performance checklist", "rubric and reflection"];
+  const tagalogCheck = ["exit check sa bokabularyo", "paghahambing ng ebidensiya", "performance checklist", "rubric at pagninilay"];
+  return {
+    objective,
+    sessionWork: singleSession ? (tagalog ? "mahahalagang konsepto at payak na aplikasyon" : "key concepts and a simple application") : (tagalog ? tagalogWork : englishWork)[phase],
+    guidedActivity: singleSession ? (tagalog ? "ginabayang gawain sa halimbawa at aplikasyon" : "guided example-and-application task") : (tagalog ? tagalogGuided : englishGuided)[phase],
+    independentActivity: singleSession ? (tagalog ? "maikling indibidwal na aplikasyon" : "short individual application") : (tagalog ? tagalogIndependent : englishIndependent)[phase],
+    check: singleSession ? (tagalog ? "maikling checklist at pagninilay" : "short checklist and reflection") : (tagalog ? tagalogCheck : englishCheck)[phase],
+    resources,
+    support: learnerSupport(context.learnerContext, tagalog),
+  };
+}
+
+function englishContent(stage: CoreStage, focus: string, details: FlowDetails) {
   const content: Record<CoreStage, string> = {
-    elicit: `Begin with a quick well-being and readiness check. Share the objective—learners will ${learnerGoal}—and explain the success criteria. Use a short recall prompt about ${sessionWork} so the teacher can identify prior knowledge and needed support.`,
-    engage: session === 0
-      ? `Introduce and define essential words related to ${focus} through pictures and familiar examples. Learners predict meanings, ask questions, and connect each word to home, school, or community experience.`
-      : session === 1
-        ? `Show a short educational video or teacher-selected demonstration about ${focus}. Provide guide questions so learners can notice benchmark practices, important characteristics, and differences between examples.`
-        : session === 2
-          ? `Present selected examples related to ${focus}. Learners identify their visible characteristics, purpose, procedure, or safety features and explain which details make each example appropriate.`
-          : `Present a realistic home, school, or community situation requiring ${focus}. Learners identify the need, predict a responsible response, and connect the challenge to the week’s objectives.`,
-    explore: `${activityLaunch} Guide learners through a ${guidedActivity}. Model the first item, complete the next item with the class, then let pairs or groups complete the remaining items while the teacher asks questions and checks understanding.`,
-    explain: `Clarify ${sessionWork} related to ${focus} using a visual organizer, worked example, or think-aloud. Learners explain their evidence, correct misconceptions, and restate the objective and success criteria in their own words.`,
-    elaborate: `Learners complete the following independent task: ${independentActivity}. Provide cues or adapted materials to learners who need support, then use a brief conference, peer check, or self-check to monitor well-being, understanding, and progress toward mastery.`,
-    evaluate: `Check mastery through a ${session === 0 ? "3–2–1 exit response and vocabulary check" : session === 1 ? "video-evidence comparison" : session === 2 ? "performance checklist and oral explanation" : "presentation rubric and reflection"}. Learners rate their confidence, identify one strength and one difficulty, and state their next step.`,
-    extend: `Learners reinforce ${focus} outside class through a safe observation, educational video or article, explanation to a family member, or supervised real-life application. They bring brief evidence or a reflection to the next session.`,
+    elicit: `Share the objective: “${details.objective}.” Check readiness with one recall question.`,
+    engage: `Using ${details.resources}, show one familiar example of ${focus}. Learners share one observation.`,
+    explore: `Model one ${details.guidedActivity}, complete one together, then let pairs try. ${details.support}`,
+    explain: `Discuss ${details.sessionWork}. Learners explain one example; give corrective feedback.`,
+    elaborate: `Learners independently complete ${details.independentActivity} using ${details.resources}. Check it against the objective.`,
+    evaluate: `Use a ${details.check} to confirm learning and set one next step.`,
+    extend: `Learners apply ${focus} to one safe home or community example and report their evidence.`,
   };
   return content[stage];
 }
 
-function tagalogContent(stage: CoreStage, session: number, focus: string) {
-  const sessionWork = ["kahulugan ng mahahalagang salita at pamilyar na halimbawa", "ebidensiya mula sa bidyo, batayang halimbawa, at mahahalagang katangian", "mga piling halimbawa, katangian, at wastong pamamaraan", "tunay na aplikasyon at pangwakas na solusyon o pagganap"][session];
-  const learnerGoal = ["bigyang-kahulugan ang mahahalagang salita at tukuyin ang angkop na halimbawa", "paghambingin ang mga halimbawa at tukuyin ang batayang katangian", "ipaliwanag ang mga piling halimbawa, katangian, at wastong pamamaraan", "ilapat ang natutuhan sa tunay na hamon at bigyang-katwiran ang solusyon"][session];
-  const guidedActivity = ["ginabayang pag-uuri ng bokabularyo at larawan", "ginabayang video evidence table at benchmarking activity", "ginabayang pagsusuri ng katangian at pamamaraan", "ginabayang pagpupulong sa pagpaplano batay sa isang kaso"][session];
-  const independentActivity = ["indibidwal na vocabulary map na may mga halimbawa", "indibidwal na paghahambing batay sa bagong bidyo o halimbawa", "indibidwal na paliwanag o demonstrasyon gamit ang checklist", "solusyon, produkto, o pagganap sa tunay na buhay gamit ang napagkasunduang rubric"][session];
-  const activityLaunch = [
-    `Ilahad at bigyang-kahulugan ang mahahalagang salitang kaugnay ng ${focus} gamit ang mga larawan at pamilyar na halimbawa.`,
-    `Magpakita ng maikling bidyong pang-edukasyon o demonstrasyon tungkol sa ${focus} at magbigay ng gabay na tanong para sa benchmarking.`,
-    `Maglahad ng mga piling halimbawang kaugnay ng ${focus} at ipapansin ang kanilang katangian, gamit, pamamaraan, o tuntuning pangkaligtasan.`,
-    `Maglahad ng makatotohanang sitwasyon sa tahanan, paaralan, o pamayanan na nangangailangan ng paglalapat ng ${focus}.`,
-  ][session];
+function tagalogContent(stage: CoreStage, focus: string, details: FlowDetails) {
   const content: Record<CoreStage, string> = {
-    elicit: `Magsimula sa mabilis na pagsusuri ng kalagayan at kahandaan. Ilahad ang layunin—ang mga mag-aaral ay inaasahang ${learnerGoal}—at ipaliwanag ang pamantayan ng tagumpay. Gumamit ng maikling tanong tungkol sa ${sessionWork} upang malaman ang dating kaalaman at kinakailangang suporta.`,
-    engage: session === 0
-      ? `Ipakilala at bigyang-kahulugan ang mahahalagang salitang kaugnay ng ${focus} gamit ang mga larawan at pamilyar na halimbawa. Hulaan ng mga mag-aaral ang kahulugan, magtanong, at iugnay ang bawat salita sa karanasan sa tahanan, paaralan, o pamayanan.`
-      : session === 1
-        ? `Magpakita ng maikling bidyong pang-edukasyon o demonstrasyong pinili ng guro tungkol sa ${focus}. Magbigay ng gabay na tanong upang mapansin ng mga mag-aaral ang batayang gawain, mahahalagang katangian, at pagkakaiba ng mga halimbawa.`
-        : session === 2
-          ? `Maglahad ng mga piling halimbawang kaugnay ng ${focus}. Tukuyin at ipaliwanag ng mga mag-aaral ang nakikitang katangian, gamit, pamamaraan, o tuntuning pangkaligtasan at ang mga detalyeng nagpapakitang angkop ang bawat halimbawa.`
-          : `Maglahad ng makatotohanang sitwasyon sa tahanan, paaralan, o pamayanan na nangangailangan ng ${focus}. Tukuyin ng mga mag-aaral ang pangangailangan, bumuo ng responsableng tugon, at iugnay ang hamon sa mga layunin ng linggo.`,
-    explore: `${activityLaunch} Gabayan ang mga mag-aaral sa ${guidedActivity}. Imodelo ang unang item, sagutan ang kasunod kasama ang klase, at ipagawa sa pares o pangkat ang natitirang item habang nagtatanong ang guro at sinusuri ang pag-unawa.`,
-    explain: `Linawin ang ${sessionWork} na kaugnay ng ${focus} gamit ang biswal na organizer, worked example, o think-aloud. Ipaliwanag ng mga mag-aaral ang ebidensiya, iwasto ang maling pagkaunawa, at sabihin sa sariling salita ang layunin at pamantayan ng tagumpay.`,
-    elaborate: `Kumpletuhin ng mga mag-aaral ang ${independentActivity}. Magbigay ng pahiwatig o angkop na kagamitan sa nangangailangan ng suporta at gumamit ng maikling kumperensiya, peer check, o self-check upang masubaybayan ang kalagayan, pag-unawa, at pag-unlad tungo sa mastery.`,
-    evaluate: `Suriin ang mastery sa pamamagitan ng ${session === 0 ? "3–2–1 exit response at pagsusulit sa bokabularyo" : session === 1 ? "paghahambing ng ebidensiya mula sa bidyo" : session === 2 ? "performance checklist at pasalitang paliwanag" : "rubric sa presentasyon at pagninilay"}. Tayahin ng mga mag-aaral ang sariling tiwala, tukuyin ang isang kalakasan at kahirapan, at sabihin ang susunod na hakbang.`,
-    extend: `Palalimin ang ${focus} sa labas ng klase sa pamamagitan ng ligtas na pagmamasid, bidyo o artikulong pang-edukasyon, pagpapaliwanag sa kasapi ng pamilya, o superbisadong aplikasyon sa tunay na buhay. Magdala ng maikling ebidensiya o pagninilay sa susunod na sesyon.`,
+    elicit: `Ilahad ang layunin: “${details.objective}.” Suriin ang kahandaan gamit ang isang recall question.`,
+    engage: `Gamit ang ${details.resources}, magpakita ng isang pamilyar na halimbawa ng ${focus}. Magbahagi ang mga mag-aaral ng isang obserbasyon.`,
+    explore: `Imodelo ang isang ${details.guidedActivity}, sagutan ang isa nang sama-sama, saka ipasubok sa pares. ${details.support}`,
+    explain: `Talakayin ang ${details.sessionWork}. Magpaliwanag ng isang halimbawa; magbigay ng wastong puna.`,
+    elaborate: `Malayang kumpletuhin ang ${details.independentActivity} gamit ang ${details.resources}. Suriin ito ayon sa layunin.`,
+    evaluate: `Gumamit ng ${details.check} upang tiyakin ang pagkatuto at magtakda ng susunod na hakbang.`,
+    extend: `Ilapat ang ${focus} sa isang ligtas na halimbawa sa tahanan o pamayanan at iulat ang ebidensiya.`,
   };
   return content[stage];
 }
 
-export function buildLessonFlow(format: LessonFlowFormat, session: number, focus: string, tagalog: boolean): LessonFlowStep[] {
+export function buildLessonFlow(format: LessonFlowFormat, session: number, focus: string, tagalog: boolean, context: LessonFlowContext): LessonFlowStep[] {
   const labels = tagalog ? tagalogStageLabels[format] : stageLabels[format];
-  return stageMap[format].map((stage, index) => ({ label: labels[index], content: tagalog ? tagalogContent(stage, session, focus) : englishContent(stage, session, focus) }));
+  const details = flowDetails(session, focus, tagalog, context);
+  return stageMap[format].map((stage, index) => {
+    const activity = tagalog ? tagalogContent(stage, focus, details) : englishContent(stage, focus, details);
+    const objectivePrefix = index === 0 && stage !== "elicit"
+      ? tagalog ? `Ilahad ang layunin: “${details.objective}.” ` : `Share the objective: “${details.objective}.” `
+      : "";
+    return { label: labels[index], content: `${objectivePrefix}${activity}` };
+  });
 }
