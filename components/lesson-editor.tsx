@@ -28,7 +28,7 @@ export function LessonEditor({ plan, onSave, onBack }: { plan: LessonPlan; onSav
       <Editable title="Learner context"><textarea value={session.learnerContext} onChange={(e)=>patchSession({learnerContext:e.target.value})}/></Editable>
       <div className="editor-section-label">LEARNING EXPERIENCE</div>
       <Editable title="Pre-lesson"><textarea value={session.preLesson} onChange={(e)=>patchSession({preLesson:e.target.value})}/></Editable>
-      <Editable title="Learning flow" badge={flowFormatName(draft.flowFormat).split(" – ")[0]}>{session.flow.steps.map((step,index)=><label key={`${step.label}-${index}`}>{step.label}<textarea value={step.content} onChange={(e)=>patchFlow(index,e.target.value)}/></label>)}</Editable>
+      <Editable title="Learning flow" badge={flowFormatName(draft.flowFormat).split(" – ")[0]}>{session.flow.steps.map((step,index)=><label key={`${step.label}-${index}`}>{step.label || `Activity ${index + 1}`}<textarea value={step.content} onChange={(e)=>patchFlow(index,e.target.value)}/></label>)}</Editable>
       <Editable title="Learning resources"><input value={session.resources.join(", ")} onChange={(e)=>patchSession({resources:e.target.value.split(",").map(v=>v.trim()).filter(Boolean)})}/></Editable>
       <Editable title="Opportunities for integration"><textarea value={session.integration} onChange={(e)=>patchSession({integration:e.target.value})}/></Editable>
       <div className="editor-section-label">ASSESSMENT</div>

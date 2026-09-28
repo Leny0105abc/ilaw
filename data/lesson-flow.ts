@@ -123,7 +123,65 @@ function tagalogContent(stage: CoreStage, focus: string, details: FlowDetails) {
   return content[stage];
 }
 
+function defaultLessonFlow(session: number, focus: string, tagalog: boolean): LessonFlowStep[] {
+  const englishPatterns = [
+    [
+      "Review the previous topic through a True or False activity.",
+      `Discuss ${focus} and its importance.`,
+      `Identify key ideas about ${focus} and their effects.`,
+      `The teacher checks and reflects on learners’ understanding of ${focus}.`,
+    ],
+    [
+      `Introduce the different types or forms related to ${focus}.`,
+      "Discuss their features and effects.",
+      `Define key terms related to ${focus}.`,
+      "Classify the examples into categories and provide examples.",
+    ],
+    [
+      `Introduce ${focus} and its real-life or environmental impact.`,
+      "Discuss its advantages and disadvantages.",
+      `Define terms and concepts related to ${focus}.`,
+      "Explain its benefits and limitations.",
+    ],
+    [
+      `Introduce methods related to ${focus} and their uses.`,
+      "Discuss where the different methods are applied.",
+      `Define key methods and terms related to ${focus}.`,
+      "Classify the methods based on their descriptions.",
+    ],
+  ];
+  const tagalogPatterns = [
+    [
+      "Balikan ang nakaraang paksa sa pamamagitan ng gawaing Tama o Mali.",
+      `Talakayin ang ${focus} at ang kahalagahan nito.`,
+      `Tukuyin ang mahahalagang ideya tungkol sa ${focus} at ang mga epekto nito.`,
+      `Suriin at pagnilayan ng guro ang pag-unawa ng mga mag-aaral sa ${focus}.`,
+    ],
+    [
+      `Ipakilala ang iba't ibang uri o anyong kaugnay ng ${focus}.`,
+      "Talakayin ang kanilang mga katangian at epekto.",
+      `Bigyang-kahulugan ang mahahalagang terminong kaugnay ng ${focus}.`,
+      "Uriin ang mga halimbawa ayon sa kategorya at magbigay ng halimbawa.",
+    ],
+    [
+      `Ipakilala ang ${focus} at ang epekto nito sa tunay na buhay o kapaligiran.`,
+      "Talakayin ang mga kalamangan at kahinaan nito.",
+      `Bigyang-kahulugan ang mga termino at konseptong kaugnay ng ${focus}.`,
+      "Ipaliwanag ang mga pakinabang at limitasyon nito.",
+    ],
+    [
+      `Ipakilala ang mga pamamaraang kaugnay ng ${focus} at ang mga gamit nito.`,
+      "Talakayin kung saan ginagamit ang iba't ibang pamamaraan.",
+      `Bigyang-kahulugan ang mahahalagang pamamaraan at terminong kaugnay ng ${focus}.`,
+      "Uriin ang mga pamamaraan batay sa kanilang paglalarawan.",
+    ],
+  ];
+  const pattern = (tagalog ? tagalogPatterns : englishPatterns)[Math.min(session, 3)];
+  return pattern.map((content) => ({ label: "", content }));
+}
+
 export function buildLessonFlow(format: LessonFlowFormat, session: number, focus: string, tagalog: boolean, context: LessonFlowContext): LessonFlowStep[] {
+  if (format === "ilaw") return defaultLessonFlow(session, focus, tagalog);
   const labels = tagalog ? tagalogStageLabels[format] : stageLabels[format];
   const details = flowDetails(session, focus, tagalog, context);
   return stageMap[format].map((stage, index) => {

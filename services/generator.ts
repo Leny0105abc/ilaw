@@ -249,7 +249,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
       objectives,
       learnerContext,
       preLesson: tagalogPreLesson(index, focus),
-      flow: { steps: buildLessonFlow(input.flowFormat, index, focus, true, flowContext) },
+      flow: { steps: buildLessonFlow(input.flowFormat, index, title, true, flowContext) },
       resources,
       integration: `Filipino at GMRC: Gamitin ng mga mag-aaral ang wastong bokabularyo upang maipahayag ang kanilang pangangatwiran at maiugnay ang aralin sa responsable at makataong pagpapasya sa tahanan, paaralan, at pamayanan.`,
       assessment: [
@@ -267,7 +267,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
       objectives,
       learnerContext,
       preLesson: englishPreLesson(index, focus),
-      flow: { steps: buildLessonFlow(input.flowFormat, index, focus, false, flowContext) },
+      flow: { steps: buildLessonFlow(input.flowFormat, index, title, false, flowContext) },
       resources,
       integration: index % 2 === 0
         ? `English: learners use lesson-specific vocabulary to explain evidence and communicate a clear conclusion during paired discussion.`
