@@ -12,20 +12,7 @@ const sessionSchema = z.object({
 const planSchema = z.object({ title: z.string(), competency: z.string(), sessions: z.array(sessionSchema).min(1).max(4) });
 
 const days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY"];
-const hooks = [
-  "Picture analysis: learners study three lesson-related images and share one observation and one question.",
-  "Fact or Bluff: learners respond to five statements, then justify one answer with a partner.",
-  "Quick sort: pairs classify picture or word cards and explain the rule they used.",
-  "Scenario check: learners identify what is safe, effective, or appropriate in a short real-life situation.",
-];
-
 const actionVerbs = ["identify and explain", "classify and compare", "demonstrate and apply", "evaluate and communicate"];
-const tagalogHooks = [
-  "Pagsusuri ng larawan: Pag-aralan ng mga mag-aaral ang tatlong larawang kaugnay ng aralin at magbahagi ng isang obserbasyon at isang tanong.",
-  "Tama o Mali: Tumugon ang mga mag-aaral sa limang pahayag at ipaliwanag sa kapareha ang batayan ng isang sagot.",
-  "Mabilisang pag-uuri: Pagpangkat-pangkatin ng mga pares ang mga kard na may larawan o salita at ipaliwanag ang ginamit na batayan.",
-  "Pagsusuri ng sitwasyon: Tukuyin ng mga mag-aaral kung ano ang wasto, responsable, o angkop sa isang maikling sitwasyon sa tunay na buhay.",
-];
 const tagalogActionVerbs = ["tukuyin at ipaliwanag", "uriin at paghambingin", "ipakita at isabuhay", "suriin at ipahayag"];
 const englishResourceSets = [
   ["PowerPoint presentation", "flashcards", "pictures/images", "textbooks or modules"],
@@ -43,6 +30,42 @@ const tagalogResourceSets = [
 export function defaultLearningResources(area: string, sessionIndex: number) {
   const sets = isTagalogLearningArea(area) ? tagalogResourceSets : englishResourceSets;
   return [...sets[Math.min(sessionIndex, sets.length - 1)]];
+}
+
+function englishPreLesson(session: number, focus: string) {
+  return [
+    `Conduct a short readiness activity about ${focus}. Show two or three familiar examples, ask learners what they already know, and introduce the lesson objective in learner-friendly language.`,
+    `Review the previous concepts about ${focus} through three retrieval questions and selected Session 1 exit responses. Clarify one misconception, then preview the objective for comparing examples and identifying important characteristics.`,
+    `Ask learners to recall what they learned about ${focus} from the previous sessions and a short video or teacher demonstration. Let pairs name the steps or characteristics they noticed before presenting the day’s performance objective.`,
+    `Recall the previous group outputs, feedback, and key concepts about ${focus}. Learners identify one strength and one point to improve, then connect the week’s objectives to the real-life application for the final session.`,
+  ][session];
+}
+
+function tagalogPreLesson(session: number, focus: string) {
+  return [
+    `Magsagawa ng maikling gawaing paghahanda tungkol sa ${focus}. Magpakita ng dalawa o tatlong pamilyar na halimbawa, itanong ang dati nang nalalaman ng mga mag-aaral, at ilahad ang layunin sa payak na pananalita.`,
+    `Balikan ang mga naunang konsepto tungkol sa ${focus} sa pamamagitan ng tatlong retrieval question at piling exit response mula sa Sesyon 1. Linawin ang isang maling pagkaunawa at ipakilala ang layunin sa paghahambing at pagtukoy ng mahahalagang katangian.`,
+    `Ipagunita sa mga mag-aaral ang natutuhan tungkol sa ${focus} mula sa mga nakaraang sesyon at sa maikling bidyo o demonstrasyon ng guro. Ipabanggit sa mga pares ang mga hakbang o katangiang napansin bago ilahad ang layunin sa pagganap.`,
+    `Balikan ang mga naunang pangkatang output, puna, at mahahalagang konsepto tungkol sa ${focus}. Tukuyin ng mga mag-aaral ang isang kalakasan at isang dapat pang pagbutihin bago iugnay ang mga layunin ng linggo sa tunay na aplikasyon.`,
+  ][session];
+}
+
+function englishExtendedLearning(session: number, focus: string) {
+  return [
+    `Learners observe safe examples of ${focus} at home or in the community, identify their type, function, or suitability, and describe two basic characteristics. A parent or guardian may assist when needed.`,
+    `Learners reinforce their understanding of ${focus} by watching an educational video or reading a simple article at home. They record two useful ideas and one question to share in the next session.`,
+    `Learners practice communication by explaining the characteristics, procedures, or safety points related to ${focus} to a family member. They ask for one question or comment and improve their explanation.`,
+    `Learners apply ${focus} through one safe, practical, real-life task or a supervised observation in a nearby community setting. They document what they did or observed and write a short reflection on how the lesson is useful.`,
+  ][session];
+}
+
+function tagalogExtendedLearning(session: number, focus: string) {
+  return [
+    `Magmasid ang mga mag-aaral ng ligtas na mga halimbawa ng ${focus} sa tahanan o pamayanan, tukuyin ang uri, gamit, o kaangkupan ng mga ito, at ilarawan ang dalawang batayang katangian. Maaaring tumulong ang magulang o tagapag-alaga kung kailangan.`,
+    `Palalimin ng mga mag-aaral ang pag-unawa sa ${focus} sa panonood ng bidyong pang-edukasyon o pagbasa ng payak na artikulo sa tahanan. Itala ang dalawang kapaki-pakinabang na ideya at isang tanong na ibabahagi sa susunod na sesyon.`,
+    `Sanayin ng mga mag-aaral ang pakikipagtalastasan sa pamamagitan ng pagpapaliwanag sa isang kasapi ng pamilya ng mga katangian, pamamaraan, o tuntuning pangkaligtasan na kaugnay ng ${focus}. Humingi ng isang tanong o puna at pagbutihin ang paliwanag.`,
+    `Ilapat ng mga mag-aaral ang ${focus} sa isang ligtas at praktikal na gawain sa tunay na buhay o superbisadong pagmamasid sa kalapit na pamayanan. Idokumento ang ginawa o napansin at sumulat ng maikling pagninilay tungkol sa kabuluhan ng aralin.`,
+  ][session];
 }
 
 export function cleanLearningObjective(objective: string) {
@@ -193,7 +216,9 @@ type Input = {
 };
 
 function focusText(text: string) {
-  return text.replace(/^(Discuss|Identify|Determine|Explain|Perform|Apply|Recognize|Differentiate|Distinguish|Examine|Create|Develop|Interpret|Demonstrate|Familiarize themselves with)\s+/i, "").replace(/\.$/, "");
+  return text
+    .replace(/^(?:(?:Discuss|Identify|Determine|Explain|Perform|Apply|Recognize|Differentiate|Distinguish|Examine|Create|Develop|Interpret|Demonstrate|Familiarize themselves with)|(?:Naisasabuhay|Naiisa-isa|Naipaliliwanag|Naisasakilos|Natutukoy|Nasusuri|Naipakikita|Naipamamalas|Nauunawaan|Nakagagawa))\s+(?:ang\s+)?/i, "")
+    .replace(/\.$/, "");
 }
 
 function lessonNameFromCompetency(competency: Competency | undefined) {
@@ -220,7 +245,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
       day: ["LUNES", "MARTES", "MIYERKULES", "HUWEBES"][index],
       objectives: tagalogObjectives(index, focus),
       learnerContext: tagalogLearnerContext(index, focus, teacherContextNotes),
-      preLesson: tagalogHooks[index],
+      preLesson: tagalogPreLesson(index, focus),
       flow: { steps: buildLessonFlow(input.flowFormat, index, focus, true) },
       resources,
       integration: `Filipino at GMRC: Gamitin ng mga mag-aaral ang wastong bokabularyo upang maipahayag ang kanilang pangangatwiran at maiugnay ang aralin sa responsable at makataong pagpapasya sa tahanan, paaralan, at pamayanan.`,
@@ -230,7 +255,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
         `Pangkatang presentasyon o demonstrasyon na mamarkahan gamit ang maikling rubric.`,
         `Portfolio output at maikling reflection journal tungkol sa natutuhan sa ${focus}.`,
       ][index],
-      extendedLearning: `Sa tahanan o pamayanan, magmasid ng isang ligtas at walang-gastos na halimbawa na kaugnay ng ${focus}, itala o ilarawan ang napansin, at ibahagi ito sa susunod na klase. Maaaring tumulong ang isang kasapi ng pamilya.`,
+      extendedLearning: tagalogExtendedLearning(index, focus),
       reflection: `Natamo ba ng mga mag-aaral ang tatlong layunin para sa Sesyon ${index + 1}? Sino ang nangangailangan ng karagdagang suporta, anong maling pagkaunawa ang dapat muling talakayin, at ano ang dapat baguhin sa susunod na sesyon?`,
     };
     return {
@@ -238,7 +263,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
       day: days[index],
       objectives: englishObjectives(index, focus),
       learnerContext: englishLearnerContext(index, focus, teacherContextNotes),
-      preLesson: hooks[index],
+      preLesson: englishPreLesson(index, focus),
       flow: { steps: buildLessonFlow(input.flowFormat, index, focus, false) },
       resources,
       integration: index % 2 === 0
@@ -250,7 +275,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
         `Group presentation or task demonstration scored with a short rubric.`,
         `Portfolio output and a short reflection journal about learning in ${focus}.`,
       ][index],
-      extendedLearning: `At home or in the community, learners observe one safe and no-cost example related to ${focus}, record or describe what they noticed, and share it in the next class. A family member may assist.` ,
+      extendedLearning: englishExtendedLearning(index, focus),
       reflection: `Were learners able to meet the three objectives for Session ${index + 1}? Which learners need additional support, what misconception needs reteaching, and what should be adjusted for the next session?`,
     };
   });
