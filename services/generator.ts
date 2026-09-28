@@ -1,10 +1,11 @@
 import { z } from "zod";
-import { Competency, GradeLevel, LessonPlan, LessonSession, TeacherProfile, Term } from "@/types/lesson-plan";
+import { Competency, GradeLevel, LessonFlowFormat, LessonPlan, LessonSession, TeacherProfile, Term } from "@/types/lesson-plan";
 import { isTagalogLearningArea } from "@/data/lesson-plan-copy";
+import { buildLessonFlow } from "@/data/lesson-flow";
 
 const sessionSchema = z.object({
   session: z.number(), day: z.string(), objectives: z.array(z.string()).length(3), learnerContext: z.string(),
-  preLesson: z.string(), flow: z.object({ iDo: z.string(), weDo: z.string(), youDo: z.string(), synthesis: z.string() }),
+  preLesson: z.string(), flow: z.object({ steps: z.array(z.object({ label: z.string(), content: z.string() })).min(3).max(7) }),
   resources: z.array(z.string()), integration: z.string(), assessment: z.string(), extendedLearning: z.string(), reflection: z.string(),
 });
 
@@ -104,8 +105,10 @@ function tagalogObjectives(session: number, focus: string) {
   return objectiveSets[session].map(cleanLearningObjective);
 }
 
-function englishFlow(session: number, focus: string, verb: string): LessonSession["flow"] {
-  const flows: LessonSession["flow"][] = [
+type LegacyFlow = { iDo: string; weDo: string; youDo: string; synthesis: string };
+
+function englishFlow(session: number, focus: string, verb: string): LegacyFlow {
+  const flows: LegacyFlow[] = [
     {
       iDo: `Introduce ${focus} through a familiar home, school, or community example. Use a short think-aloud to model how to ${verb} the essential ideas, then unpack the lesson vocabulary and success criteria with a visual concept map.`,
       weDo: `Conduct a Notice–Think–Wonder activity using two contrasting examples. Learners contribute observations while the class completes a shared organizer that separates prior knowledge, new information, and questions for investigation.`,
@@ -134,8 +137,8 @@ function englishFlow(session: number, focus: string, verb: string): LessonSessio
   return flows[session];
 }
 
-function tagalogFlow(session: number, focus: string, verb: string): LessonSession["flow"] {
-  const flows: LessonSession["flow"][] = [
+function tagalogFlow(session: number, focus: string, verb: string): LegacyFlow {
+  const flows: LegacyFlow[] = [
     {
       iDo: `Ipakilala ang ${focus} sa pamamagitan ng pamilyar na halimbawa mula sa tahanan, paaralan, o pamayanan. Ipakita sa think-aloud kung paano ${verb} ang mahahalagang ideya, saka linawin ang pangunahing bokabularyo at pamantayan ng tagumpay gamit ang biswal na concept map.`,
       weDo: `Isagawa ang Pansinin–Isipin–Itanong gamit ang dalawang magkaibang halimbawa. Magbahagi ang mga mag-aaral ng obserbasyon habang sama-samang pinupunan ang organizer para sa dating kaalaman, bagong impormasyon, at mga tanong na dapat siyasatin.`,
@@ -186,7 +189,7 @@ function tagalogLearnerContext(session: number, focus: string, teacherNotes: str
 
 type Input = {
   grade: GradeLevel; area: Competency["area"]; term: Term; week: number; competencies: Competency[]; topic: string;
-  sessions: number; learnerContext: string; duration: number; availableResources: string; instructions: string; profile: TeacherProfile; section: string; schoolYear: string;
+  sessions: number; flowFormat: LessonFlowFormat; learnerContext: string; duration: number; availableResources: string; instructions: string; profile: TeacherProfile; section: string; schoolYear: string;
 };
 
 function focusText(text: string) {
@@ -211,7 +214,6 @@ export function generateLessonPlan(input: Input): LessonPlan {
   const teacherContextNotes = input.learnerContext.trim();
 
   const sessions: LessonSession[] = Array.from({ length: input.sessions }, (_, index) => {
-    const verb = (tagalog ? tagalogActionVerbs : actionVerbs)[index];
     const resources = providedResources.length ? providedResources : defaultLearningResources(input.area, index);
     if (tagalog) return {
       session: index + 1,
@@ -219,7 +221,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
       objectives: tagalogObjectives(index, focus),
       learnerContext: tagalogLearnerContext(index, focus, teacherContextNotes),
       preLesson: tagalogHooks[index],
-      flow: tagalogFlow(index, focus, verb),
+      flow: { steps: buildLessonFlow(input.flowFormat, index, focus, true) },
       resources,
       integration: `Filipino at GMRC: Gamitin ng mga mag-aaral ang wastong bokabularyo upang maipahayag ang kanilang pangangatwiran at maiugnay ang aralin sa responsable at makataong pagpapasya sa tahanan, paaralan, at pamayanan.`,
       assessment: [
@@ -237,7 +239,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
       objectives: englishObjectives(index, focus),
       learnerContext: englishLearnerContext(index, focus, teacherContextNotes),
       preLesson: hooks[index],
-      flow: englishFlow(index, focus, verb),
+      flow: { steps: buildLessonFlow(input.flowFormat, index, focus, false) },
       resources,
       integration: index % 2 === 0
         ? `English: learners use lesson-specific vocabulary to explain evidence and communicate a clear conclusion during paired discussion.`
@@ -261,7 +263,7 @@ export function generateLessonPlan(input: Input): LessonPlan {
     competencyIds: input.competencies.map((item) => item.id), competencyText: validated.competency, topic: input.topic,
     references: Array.from(new Set(input.competencies.map((item) => item.source).filter(Boolean))).join("; ") || `Grade ${input.grade} Budget of Work`,
     aiDeclaration: tagalog ? "Ginamit ang AI upang tumulong sa pag-aayos ng estruktura ng banghay-aralin, pag-uugnay ng mga layunin sa napiling kasanayang pampagkatuto, pagpapahusay ng pananalita, at pagmumungkahi ng mga gawain at pagkakataon para sa integrasyon. Sinuri at pinagtibay ng guro ang nabuong nilalaman bago ito gamitin." : "AI was used to assist in organizing the lesson-plan structure, aligning objectives with the selected learning competency, improving wording, and suggesting learning activities and integration opportunities. The teacher reviewed and validated the generated content before use.",
-    learnerNotes: input.learnerContext, availableResources: input.availableResources, teacherInstructions: input.instructions,
+    learnerNotes: input.learnerContext, availableResources: input.availableResources, teacherInstructions: input.instructions, flowFormat: input.flowFormat,
     status: "Draft", createdAt: now, updatedAt: now, profile: input.profile, sessions: validated.sessions,
   };
 }

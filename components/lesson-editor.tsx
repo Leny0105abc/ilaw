@@ -6,13 +6,14 @@ import { LessonPlan, LessonSession } from "@/types/lesson-plan";
 import { exportDocx, exportPdf } from "@/services/export";
 import { LessonPreview } from "@/components/lesson-preview";
 import { learningAreaLabel } from "@/data/curriculum";
+import { flowFormatName } from "@/data/lesson-flow";
 
 export function LessonEditor({ plan, onSave, onBack }: { plan: LessonPlan; onSave: (plan: LessonPlan) => void; onBack: () => void }) {
   const [draft, setDraft] = useState(plan); const [tab, setTab] = useState<"editor"|"preview">("editor"); const [sessionIndex, setSessionIndex] = useState(0); const [saving, setSaving] = useState(false);
   useEffect(() => { const id = setTimeout(() => { setSaving(true); const next = { ...draft, updatedAt: new Date().toISOString() }; onSave(next); setTimeout(() => setSaving(false), 250); }, 900); return () => clearTimeout(id); }, [draft]); // eslint-disable-line react-hooks/exhaustive-deps
   const session = draft.sessions[sessionIndex];
   function patchSession(patch: Partial<LessonSession>) { setDraft({ ...draft, sessions: draft.sessions.map((item, index) => index === sessionIndex ? { ...item, ...patch } : item) }); }
-  function patchFlow(key: keyof LessonSession["flow"], value: string) { patchSession({ flow: { ...session.flow, [key]: value } }); }
+  function patchFlow(index: number, value: string) { patchSession({ flow: { steps: session.flow.steps.map((step, stepIndex) => stepIndex === index ? { ...step, content: value } : step) } }); }
   function patchTeacherName(teacherName: string) { setDraft({ ...draft, profile: { ...draft.profile, teacherName } }); }
   function print() { window.print(); }
 
@@ -27,7 +28,7 @@ export function LessonEditor({ plan, onSave, onBack }: { plan: LessonPlan; onSav
       <Editable title="Learner context"><textarea value={session.learnerContext} onChange={(e)=>patchSession({learnerContext:e.target.value})}/></Editable>
       <div className="editor-section-label">LEARNING EXPERIENCE</div>
       <Editable title="Pre-lesson"><textarea value={session.preLesson} onChange={(e)=>patchSession({preLesson:e.target.value})}/></Editable>
-      <Editable title="Learning flow" badge="Gradual Release"><label>I DO<textarea value={session.flow.iDo} onChange={(e)=>patchFlow("iDo",e.target.value)}/></label><label>WE DO<textarea value={session.flow.weDo} onChange={(e)=>patchFlow("weDo",e.target.value)}/></label><label>YOU DO<textarea value={session.flow.youDo} onChange={(e)=>patchFlow("youDo",e.target.value)}/></label><label>SYNTHESIS<textarea value={session.flow.synthesis} onChange={(e)=>patchFlow("synthesis",e.target.value)}/></label></Editable>
+      <Editable title="Learning flow" badge={flowFormatName(draft.flowFormat).split(" – ")[0]}>{session.flow.steps.map((step,index)=><label key={`${step.label}-${index}`}>{step.label}<textarea value={step.content} onChange={(e)=>patchFlow(index,e.target.value)}/></label>)}</Editable>
       <Editable title="Learning resources"><input value={session.resources.join(", ")} onChange={(e)=>patchSession({resources:e.target.value.split(",").map(v=>v.trim()).filter(Boolean)})}/></Editable>
       <Editable title="Opportunities for integration"><textarea value={session.integration} onChange={(e)=>patchSession({integration:e.target.value})}/></Editable>
       <div className="editor-section-label">ASSESSMENT</div>

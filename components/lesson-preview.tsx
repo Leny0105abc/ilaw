@@ -6,7 +6,7 @@ export function LessonPreview({ plan }: { plan: LessonPlan }) {
   const labels = lessonPlanLabels(plan.area);
   const columnLabels = firstColumnLabels();
   const cell = (getter: (index:number)=>React.ReactNode) => Array.from({length:4},(_,i)=><td key={i}>{i<plan.sessions.length?getter(i):""}</td>);
-  const flow = (index:number) => <div className="flow-cell"><span className="flow-step">{plan.sessions[index].flow.iDo}</span><span className="flow-step">{plan.sessions[index].flow.weDo}</span><span className="flow-step">{plan.sessions[index].flow.youDo}</span><b>{labels.flowParts[3]}</b><span className="flow-step">{plan.sessions[index].flow.synthesis}</span></div>;
+  const flow = (index:number) => <div className="flow-cell">{plan.sessions[index].flow.steps.map((step,stepIndex)=><div key={`${step.label}-${stepIndex}`}><b>{step.label}</b><span className="flow-step">{step.content}</span></div>)}</div>;
 
   return <div className="lesson-document" id="printable-plan">
     <article className="paper page-one"><DocumentHeader plan={plan}/><table><tbody>

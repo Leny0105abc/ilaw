@@ -1,6 +1,8 @@
 export type GradeLevel = 7 | 8 | 9 | 10;
 export type Term = 1 | 2 | 3 | "one-term";
 export type LearningArea = "Agriculture and Fishery Arts" | "Family and Consumer Science" | "Industrial Arts" | "Information and Communications Technology" | "ICT - Computer Programming" | "ICT - Computer Systems Servicing" | "Good Manners and Right Conduct";
+export type LessonFlowFormat = "ilaw" | "4as" | "4es" | "5es" | "7es" | "gradual-release" | "ppp";
+export type LessonFlowStep = { label: string; content: string };
 
 export type Competency = {
   id: string;
@@ -19,7 +21,7 @@ export type LessonSession = {
   objectives: string[];
   learnerContext: string;
   preLesson: string;
-  flow: { iDo: string; weDo: string; youDo: string; synthesis: string };
+  flow: { steps: LessonFlowStep[] };
   resources: string[];
   integration: string;
   assessment: string;
@@ -57,6 +59,7 @@ export type LessonPlan = {
   learnerNotes: string;
   availableResources: string;
   teacherInstructions: string;
+  flowFormat: LessonFlowFormat;
   status: "Draft" | "Completed";
   createdAt: string;
   updatedAt: string;

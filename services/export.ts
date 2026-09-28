@@ -30,7 +30,7 @@ function rows(plan: LessonPlan): Array<[string, ...ExportCell[]]> {
     [columnLabels.context, ...dayValues(plan, (i) => plan.sessions[i].learnerContext)],
     [columnLabels.experience, merged(learningExperienceDescription(plan.area))],
     [columnLabels.preLesson, ...dayValues(plan, (i) => plan.sessions[i].preLesson)],
-    [columnLabels.flow, ...dayValues(plan, (i) => `${plan.sessions[i].flow.iDo}\n\n${plan.sessions[i].flow.weDo}\n\n${plan.sessions[i].flow.youDo}\n\n${labels.flowParts[3]}: ${plan.sessions[i].flow.synthesis}`)],
+    [columnLabels.flow, ...dayValues(plan, (i) => plan.sessions[i].flow.steps.map((step) => `${step.label}: ${step.content}`).join("\n\n"))],
     [columnLabels.resources, ...dayValues(plan, (i) => plan.sessions[i].resources.join(", "))],
     [columnLabels.integration, ...dayValues(plan, (i) => plan.sessions[i].integration)],
     [columnLabels.assessment, merged(assessmentDescription(plan.area))],
