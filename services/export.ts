@@ -8,10 +8,10 @@ import { assessmentDescription, firstColumnLabels, learningExperienceDescription
 const dayValues = <T,>(plan: LessonPlan, getter: (index: number) => T) => Array.from({ length: 4 }, (_, index) => index < plan.sessions.length ? getter(index) : ("" as T));
 const text = (value: unknown) => String(value ?? "");
 
-type ExportCell = string | { content: string; colSpan?: number; styles?: { halign: "center" } };
+type ExportCell = string | { content: string; colSpan?: number; styles?: { halign?: "center"; fontSize?: number } };
 
 function merged(content: string): ExportCell { return { content, colSpan: 4 }; }
-function centered(content: string): ExportCell { return { content, styles: { halign: "center" } }; }
+function centered(content: string, fontSize?: number): ExportCell { return { content, styles: { halign: "center", fontSize } }; }
 
 function rows(plan: LessonPlan): Array<[string, ...ExportCell[]]> {
   const labels = lessonPlanLabels(plan.area);
@@ -21,7 +21,7 @@ function rows(plan: LessonPlan): Array<[string, ...ExportCell[]]> {
     [columnLabels.area, merged(learningAreaLabel(plan.grade, plan.area))],
     [columnLabels.teacher, merged(plan.profile.teacherName)],
     [columnLabels.gradeSection, merged(`${labels.gradeWord} ${plan.grade} - ${plan.section}`)],
-    [columnLabels.sessions, ...dayValues(plan, (i) => centered(`${labels.session} ${i + 1}`))],
+    [columnLabels.sessions, ...dayValues(plan, (i) => centered(`${labels.session} ${i + 1}`, 12))],
     [columnLabels.references, merged(plan.references)],
     [columnLabels.ai, merged(plan.aiDeclaration)],
     [columnLabels.intentions, merged(labels.intentionDescription)],
@@ -62,29 +62,29 @@ export async function exportDocx(plan: LessonPlan) {
           columnSpan: typeof item === "string" ? undefined : item.colSpan,
           borders: { top:border,bottom:border,left:border,right:border },
           shading: index === 0 ? { fill: "EEF3F9" } : undefined,
-          children: text(value).split("\n").map((line) => new Paragraph({ alignment: typeof item !== "string" && item.styles?.halign === "center" ? AlignmentType.CENTER : undefined, spacing: { after: 40 }, children: [new TextRun({ text: line, bold: index === 0 || (typeof item !== "string" && item.styles?.halign === "center"), size: 15 })] })),
+          children: text(value).split("\n").map((line) => new Paragraph({ alignment: typeof item !== "string" && item.styles?.halign === "center" ? AlignmentType.CENTER : undefined, spacing: { after: 40 }, children: [new TextRun({ text: line, bold: index === 0 || (typeof item !== "string" && item.styles?.halign === "center"), size: typeof item !== "string" && item.styles?.fontSize ? item.styles.fontSize * 2 : 20 })] })),
         });
       }),
     }));
   const doc = new Document({ sections: [{ properties: { page: { size: { orientation: PageOrientation.LANDSCAPE }, margin: { top: 280, right: 280, bottom: 280, left: 280 } } }, children: [
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 40 }, children: [new ImageRun({ data: logoData, transformation: { width: 54, height: 54 }, type: "png" })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: labels.republic, size: 18 })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: labels.republic, size: 20 })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: labels.department, bold: true, size: 20 })] }),
-    ...[plan.profile.region, plan.profile.division, plan.profile.district, plan.profile.school, plan.profile.location].map((line) => new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: line, size: 17 })] })),
+    ...[plan.profile.region, plan.profile.division, plan.profile.district, plan.profile.school, plan.profile.location].map((line) => new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: line, size: 20 })] })),
     new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, spacing: { before: 100, after: 120 }, children: [new TextRun({ text: labels.lessonPlan, bold: true, size: 24 })] }),
     new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [1850, 1900, 1900, 1900, 1900], rows: tableRows(pageOneRows) }),
-    new Paragraph({ pageBreakBefore: true, alignment: AlignmentType.CENTER, spacing: { after: 120 }, children: [new TextRun({ text: `${labels.lessonPlan} – ${labels.continuation}`, bold: true, size: 22 })] }),
+    new Paragraph({ pageBreakBefore: true, alignment: AlignmentType.CENTER, spacing: { after: 120 }, children: [new TextRun({ text: `${labels.lessonPlan} – ${labels.continuation}`, bold: true, size: 24 })] }),
     new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [1850, 1900, 1900, 1900, 1900], rows: tableRows(pageTwoRows) }),
     new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, columnWidths: [4750, 4750], rows: [new TableRow({ children: [
       new TableCell({ borders: { top:noBorder,bottom:noBorder,left:noBorder,right:noBorder }, children: [
-        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 240 }, children: [new TextRun({ text: labels.preparedBy, size: 18 })] }),
-        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 360 }, children: [new TextRun({ text: plan.profile.teacherName, bold: true, size: 19 })] }),
-        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: localizedPosition(plan.profile.position, plan.area), size: 18 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 240 }, children: [new TextRun({ text: labels.preparedBy, size: 20 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 360 }, children: [new TextRun({ text: plan.profile.teacherName, bold: true, size: 20 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: localizedPosition(plan.profile.position, plan.area), size: 20 })] }),
       ] }),
       new TableCell({ borders: { top:noBorder,bottom:noBorder,left:noBorder,right:noBorder }, children: [
-        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 240 }, children: [new TextRun({ text: labels.reviewedBy, size: 18 })] }),
-        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 360 }, children: [new TextRun({ text: plan.profile.schoolHead, bold: true, size: 19 })] }),
-        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: localizedPosition(plan.profile.schoolHeadPosition, plan.area), size: 18 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 240 }, children: [new TextRun({ text: labels.reviewedBy, size: 20 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 360 }, children: [new TextRun({ text: plan.profile.schoolHead, bold: true, size: 20 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: localizedPosition(plan.profile.schoolHeadPosition, plan.area), size: 20 })] }),
       ] }),
     ] })] }),
   ] }] });
@@ -98,13 +98,13 @@ export async function exportPdf(plan: LessonPlan) {
   const [pageOneRows, pageTwoRows] = splitRows(plan);
   const logoData = await imageDataUrl("/deped-seal.png");
   pdf.addImage(logoData, "PNG", 394, 12, 54, 54);
-  pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
+  pdf.setFont("helvetica", "normal"); pdf.setFontSize(10);
   pdf.text(labels.republic, 421, 76, { align: "center" });
   pdf.setFont("helvetica", "bold"); pdf.text(labels.department, 421, 89, { align: "center" });
   pdf.setFont("helvetica", "normal"); pdf.text(`${plan.profile.region} | ${plan.profile.division} | ${plan.profile.district}`, 421, 102, { align: "center" });
   pdf.text(`${plan.profile.school} - ${plan.profile.location}`, 421, 115, { align: "center" });
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(12); pdf.text(labels.lessonPlan, 421, 132, { align: "center" });
-  const tableOptions = { theme: "grid" as const, styles: { fontSize: 5.6, cellPadding: 2.4, valign: "top" as const, lineColor: [100,116,139] as [number,number,number], lineWidth: .3 }, columnStyles: { 0: { fillColor: [238,243,249] as [number,number,number], fontStyle: "bold" as const, cellWidth: 106 } }, margin: { left: 16, right: 16 } };
+  const tableOptions = { theme: "grid" as const, styles: { fontSize: 10, cellPadding: 2.4, valign: "top" as const, lineColor: [100,116,139] as [number,number,number], lineWidth: .3 }, columnStyles: { 0: { fillColor: [238,243,249] as [number,number,number], fontStyle: "bold" as const, cellWidth: 106 } }, margin: { left: 16, right: 16 } };
   autoTable(pdf, { startY: 142, body: pageOneRows, ...tableOptions });
   pdf.addPage("a4", "landscape");
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(12); pdf.text(`${labels.lessonPlan} – ${labels.continuation}`, 421, 28, { align: "center" });
@@ -112,7 +112,7 @@ export async function exportPdf(plan: LessonPlan) {
   const finalTableY = (pdf as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 460;
   let signatureY = finalTableY + 24;
   if (signatureY > 515) { pdf.addPage("a4", "landscape"); signatureY = 36; }
-  pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
+  pdf.setFont("helvetica", "normal"); pdf.setFontSize(10);
   const signatureLeft = 32;
   const signatureWidth = 778;
   const signatureColumnWidth = signatureWidth / 2;
@@ -123,7 +123,7 @@ export async function exportPdf(plan: LessonPlan) {
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(10);
   pdf.text(plan.profile.teacherName, leftSignatureCenter, signatureY + 40, { align: "center" });
   pdf.text(plan.profile.schoolHead, rightSignatureCenter, signatureY + 40, { align: "center" });
-  pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
+  pdf.setFont("helvetica", "normal"); pdf.setFontSize(10);
   pdf.text(localizedPosition(plan.profile.position, plan.area), leftSignatureCenter, signatureY + 54, { align: "center" });
   pdf.text(localizedPosition(plan.profile.schoolHeadPosition, plan.area), rightSignatureCenter, signatureY + 54, { align: "center" });
   pdf.save(`${exportFilename(plan)}.pdf`);

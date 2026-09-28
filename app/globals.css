@@ -11,3 +11,8 @@
 .paper footer{grid-template-columns:repeat(2,minmax(0,1fr));justify-content:space-between;gap:5rem;margin:22px 14px 0}.paper footer .signature-block{width:100%;min-width:0}.paper .session-row td{text-align:center;vertical-align:middle;font-weight:700}
 .lesson-document{display:grid;gap:1rem}.paper.page-two{min-height:538px}.continuation-header{padding:4px 0 10px}.continuation-header h2{margin:0}.lesson-document .paper{margin:auto}@media print{.lesson-document{display:block}.lesson-document .paper+.paper{break-before:page;page-break-before:always}.paper.page-two{min-height:0}}
 .flow-cell .flow-step{display:block;margin:0 0 4px}
+
+/* Lesson document typography: 10 pt throughout, with 12 pt document and session headings. */
+.paper,.paper header,.paper table,.paper thead th,.paper footer,.paper footer strong{font-size:10pt}
+.paper header h2{font-size:12pt}
+.paper .session-row td{font-size:12pt}
