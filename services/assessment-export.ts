@@ -1,13 +1,15 @@
 import { AlignmentType, BorderStyle, Document, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from "docx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Assessment, bloomLevels } from "@/types/assessment";
+import { Assessment, TOSFormat } from "@/types/assessment";
 import { learningAreaLabel } from "@/data/curriculum";
+import { buildTOSWord, buildTOSPdf, tosPrintHtml } from "@/services/tos-export";
+import { tosFormatLabel } from "@/services/tos-presentation";
 
 type ExportPart = "test" | "answer-key" | "tos";
 
 function filename(assessment: Assessment, part: ExportPart, extension: string) {
-  const partName = part === "test" ? "Summative Test" : part === "answer-key" ? "Answer Key" : "TOS";
+  const partName = part === "test" ? "Summative Test" : part === "answer-key" ? "Answer Key" : tosFormatLabel(assessment.tosFormat || "standard");
   return `${safe(`${learningAreaLabel(assessment.grade, assessment.subject)}_${assessment.title}_${partName}`)}.${extension}`;
 }
 
@@ -47,6 +49,7 @@ function docTable(headers: string[], rows: string[][], widths?: number[]) {
 }
 
 export async function exportAssessmentWord(assessment: Assessment, part: ExportPart) {
+  if (part === "tos") { download(await Packer.toBlob(buildTOSWord(assessment, assessment.tosFormat || "standard")), filename(assessment, part, "docx")); return; }
   let children: (Paragraph | Table)[] = [];
   if (part === "test") {
     children = [...heading(assessment, "SUMMATIVE TEST")];
@@ -56,19 +59,14 @@ export async function exportAssessmentWord(assessment: Assessment, part: ExportP
     });
   } else if (part === "answer-key") {
     children = [...heading(assessment, "ANSWER KEY"), docTable(["Item", "Answer", "Bloom Level", "Learning Competency"], assessment.questions.map((item) => [String(item.number), item.correctAnswer, item.bloomLevel, item.competency]))];
-  } else {
-    children = [...heading(assessment, "TABLE OF SPECIFICATIONS"), docTable(
-      ["Learning Competency", "Days", "%", ...bloomLevels, "Total", "Item Numbers"],
-      assessment.tos.map((row) => [row.competency, String(row.teachingDays), `${row.percentage}%`, ...bloomLevels.map((level) => String(row.distribution[level])), String(row.totalItems), row.itemNumbers.join(", ")]),
-    )];
   }
   const doc = new Document({ sections: [{ properties: { page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } }, children }] });
   download(await Packer.toBlob(doc), filename(assessment, part, "docx"));
 }
 
 export function exportAssessmentPdf(assessment: Assessment, part: ExportPart) {
-  const landscape = part === "tos";
-  const pdf = new jsPDF({ orientation: landscape ? "landscape" : "portrait", unit: "pt", format: "a4" });
+  if (part === "tos") { buildTOSPdf(assessment, assessment.tosFormat || "standard").save(filename(assessment,part,"pdf")); return; }
+  const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
   const pageWidth = pdf.internal.pageSize.getWidth();
   pdf.setFont("helvetica", "bold"); pdf.setFontSize(14);
   pdf.text(part === "test" ? "SUMMATIVE TEST" : part === "answer-key" ? "ANSWER KEY" : "TABLE OF SPECIFICATIONS", pageWidth / 2, 38, { align: "center" });
@@ -86,19 +84,20 @@ export function exportAssessmentPdf(assessment: Assessment, part: ExportPart) {
     });
   } else if (part === "answer-key") {
     autoTable(pdf, { startY: 84, head: [["Item", "Answer", "Bloom Level", "Learning Competency"]], body: assessment.questions.map((item) => [item.number, item.correctAnswer, item.bloomLevel, item.competency]), styles: { fontSize: 8, cellPadding: 4 }, headStyles: { fillColor: [23, 63, 138] } });
-  } else {
-    autoTable(pdf, { startY: 84, head: [["Learning Competency", "Days", "%", "R", "U", "Ap", "An", "E", "C", "Total", "Item Numbers"]], body: assessment.tos.map((row) => [row.competency, row.teachingDays, row.percentage, ...bloomLevels.map((level) => row.distribution[level]), row.totalItems, row.itemNumbers.join(", ")]), styles: { fontSize: 7, cellPadding: 3 }, headStyles: { fillColor: [23, 63, 138] }, columnStyles: { 0: { cellWidth: 210 }, 10: { cellWidth: 110 } } });
   }
   pdf.save(filename(assessment, part, "pdf"));
 }
 
-export function exportTOSExcel(assessment: Assessment) {
-  const escape = (value: unknown) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const headers = ["Learning Competency", "Number of Teaching Days/Sessions", "Percentage", ...bloomLevels, "Total Items", "Item Numbers"];
-  const rows = assessment.tos.map((row) => [row.competency, row.teachingDays, `${row.percentage}%`, ...bloomLevels.map((level) => row.distribution[level]), row.totalItems, row.itemNumbers.join(", ")]);
-  const rowXml = (values: unknown[]) => `<Row>${values.map((value) => `<Cell><Data ss:Type="${typeof value === "number" ? "Number" : "String"}">${escape(value)}</Data></Cell>`).join("")}</Row>`;
-  const xml = `<?xml version="1.0"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="TOS"><Table>${rowXml(headers)}${rows.map(rowXml).join("")}</Table></Worksheet></Workbook>`;
-  download(new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8" }), filename(assessment, "tos", "xls"));
+export async function exportTOSExcel(assessment: Assessment, format: TOSFormat = assessment.tosFormat || "standard") {
+  const { buildTOSWorkbook } = await import("@/services/tos-excel");
+  let seal: string | undefined;
+  try {
+    const response=await fetch("/deped-seal.png");
+    if(response.ok) seal=await new Promise<string>((resolve,reject)=>{ response.blob().then(blob=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);}).catch(reject); });
+  } catch { /* The editable workbook remains usable if the optional seal is unavailable. */ }
+  const workbook=await buildTOSWorkbook(assessment,format,seal);
+  const buffer=await workbook.xlsx.writeBuffer();
+  download(new Blob([new Uint8Array(buffer)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), filename({...assessment,tosFormat:format},"tos","xlsx"));
 }
 
 export function printAssessment(assessment: Assessment, part: ExportPart) {
@@ -107,7 +106,7 @@ export function printAssessment(assessment: Assessment, part: ExportPart) {
   const escape = (value: unknown) => String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const test = assessment.questions.map((item) => `<article><b>${item.number}. ${escape(item.question)}</b>${(["A", "B", "C", "D"] as const).map((letter) => `<div>${letter}. ${escape(item.choices[letter])}</div>`).join("")}</article>`).join("");
   const answer = `<table><thead><tr><th>Item</th><th>Answer</th><th>Bloom Level</th><th>Learning Competency</th></tr></thead><tbody>${assessment.questions.map((item) => `<tr><td>${item.number}</td><td>${item.correctAnswer}</td><td>${item.bloomLevel}</td><td>${escape(item.competency)}</td></tr>`).join("")}</tbody></table>`;
-  const tos = `<table><thead><tr>${["Learning Competency", "Days", "%", ...bloomLevels, "Total", "Item Numbers"].map((item) => `<th>${item}</th>`).join("")}</tr></thead><tbody>${assessment.tos.map((row) => `<tr><td>${escape(row.competency)}</td><td>${row.teachingDays}</td><td>${row.percentage}%</td>${bloomLevels.map((level) => `<td>${row.distribution[level]}</td>`).join("")}<td>${row.totalItems}</td><td>${row.itemNumbers.join(", ")}</td></tr>`).join("")}</tbody></table>`;
-  popup.document.write(`<!doctype html><html><head><title>${escape(assessment.title)}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111;font-size:12px}h1,h2,p{text-align:center}article{margin:18px 0;break-inside:avoid}article div{margin:4px 0 0 24px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #555;padding:5px;vertical-align:top}th{background:#e8effa}@media print{body{margin:12mm}}</style></head><body><h1>${part === "test" ? "SUMMATIVE TEST" : part === "answer-key" ? "ANSWER KEY" : "TABLE OF SPECIFICATIONS"}</h1><h2>${escape(assessment.title)}</h2><p>${escape(learningAreaLabel(assessment.grade, assessment.subject))} · Term ${assessment.term} · ${assessment.totalItems} items</p>${part === "test" ? test : part === "answer-key" ? answer : tos}<script>window.onload=()=>window.print()</script></body></html>`);
+  const content=part==="tos"?tosPrintHtml(assessment,assessment.tosFormat||"standard"):`<h1>${part==="test"?"SUMMATIVE TEST":"ANSWER KEY"}</h1><h2>${escape(assessment.title)}</h2><p>${escape(learningAreaLabel(assessment.grade,assessment.subject))} · Term ${assessment.term} · ${assessment.totalItems} items</p>${part==="test"?test:answer}`;
+  popup.document.write(`<!doctype html><html><head><title>${escape(assessment.title)}</title><style>body{font-family:Arial,sans-serif;margin:32px;color:#111;font-size:12px}h1,h2,p{text-align:center}article{margin:18px 0;break-inside:avoid}article div{margin:4px 0 0 24px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #555;padding:5px;vertical-align:top}th{background:#e8effa}@media print{body{margin:12mm}}</style></head><body>${content}<script>window.onload=()=>window.print()</script></body></html>`);
   popup.document.close();
 }

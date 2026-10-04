@@ -1,8 +1,9 @@
-import { GradeLevel, LearningArea } from "@/types/lesson-plan";
+import { GradeLevel, LearningArea, TeacherProfile } from "@/types/lesson-plan";
 
 export type AssessmentTerm = 1 | 2 | 3;
 export type BloomLevel = "Remembering" | "Understanding" | "Applying" | "Analyzing" | "Evaluating" | "Creating";
 export type AnswerChoice = "A" | "B" | "C" | "D";
+export type TOSFormat = "standard" | "item-placement";
 
 export const bloomLevels: BloomLevel[] = ["Remembering", "Understanding", "Applying", "Analyzing", "Evaluating", "Creating"];
 
@@ -45,6 +46,10 @@ export type Assessment = {
   totalItems: number;
   competencies: AssessmentCompetency[];
   tosMode: "automatic" | "manual";
+  tosFormat?: TOSFormat;
+  schoolYear?: string;
+  sessionMinutes?: number;
+  profile?: TeacherProfile;
   tos: TOSRow[];
   questions: AssessmentQuestion[];
   createdAt: string;

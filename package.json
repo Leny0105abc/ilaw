@@ -7,10 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify:tos": "node scripts/verify-tos.cjs"
   },
   "dependencies": {
     "docx": "^9.5.1",
+    "exceljs": "4.4.0",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.545.0",

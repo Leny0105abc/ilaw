@@ -3,11 +3,11 @@ import { GradeLevel, LearningArea } from "@/types/lesson-plan";
 
 const bloomWeights: Record<BloomLevel, number> = {
   Remembering: 20,
-  Understanding: 25,
-  Applying: 25,
-  Analyzing: 15,
+  Understanding: 20,
+  Applying: 20,
+  Analyzing: 20,
   Evaluating: 10,
-  Creating: 5,
+  Creating: 10,
 };
 
 function allocate(total: number, weights: number[]) {
@@ -27,7 +27,7 @@ function emptyDistribution(): Record<BloomLevel, number> {
 
 export function generateTOS(competencies: AssessmentCompetency[], totalItems: number, teachingDays?: number[]): TOSRow[] {
   if (!competencies.length || totalItems < 1) return [];
-  const days = competencies.map((_, index) => Math.max(1, teachingDays?.[index] || 1));
+  const days = competencies.map((_, index) => Math.max(0.25, teachingDays?.[index] || 1));
   const rowTotals = allocate(totalItems, days);
   const globalCounts = allocate(totalItems, bloomLevels.map((level) => bloomWeights[level]));
   const assigned = bloomLevels.map(() => 0);
@@ -67,7 +67,7 @@ export function normalizeTOS(rows: TOSRow[], targetTotal: number): TOSRow[] {
     const totalItems = bloomLevels.reduce((sum, level) => sum + Math.max(0, Math.floor(row.distribution[level] || 0)), 0);
     return {
       ...row,
-      teachingDays: Math.max(1, Math.floor(row.teachingDays || 1)),
+      teachingDays: Math.max(0.25, row.teachingDays || 1),
       totalItems,
       percentage: targetTotal ? Number(((totalItems / targetTotal) * 100).toFixed(1)) : 0,
       itemNumbers: Array.from({ length: totalItems }, () => nextItem++),
@@ -194,6 +194,7 @@ export function createAssessment(input: { title: string; grade: GradeLevel; subj
     totalItems: input.totalItems,
     competencies: input.competencies,
     tosMode: "automatic",
+    tosFormat: "standard",
     tos: generateTOS(input.competencies, input.totalItems),
     questions: [],
     createdAt: now,
