@@ -3,8 +3,10 @@ import jsPDF from "jspdf";
 import autoTable, { RowInput } from "jspdf-autotable";
 import { Assessment, TOSFormat, bloomLevels } from "@/types/assessment";
 import { getTOSPresentation, itemPlacementText, tosFormatLabel } from "@/services/tos-presentation";
+import { assertValidTOS } from "@/services/assessment-generator";
 
 export function buildTOSWord(assessment: Assessment, format: TOSFormat) {
+  assertValidTOS(assessment);
   const view=getTOSPresentation(assessment);
   const border={style:BorderStyle.SINGLE,size:4,color:"000000"};
   const paragraph=(text:string,bold=false,center=true)=>new Paragraph({alignment:center?AlignmentType.CENTER:AlignmentType.LEFT,children:[new TextRun({text,bold,font:"Times New Roman",size:20})]});
@@ -24,12 +26,13 @@ export function buildTOSWord(assessment: Assessment, format: TOSFormat) {
   return new Document({styles:{default:{document:{run:{font:"Times New Roman",size:20}}}},sections:[{properties:{page:{size:{orientation:PageOrientation.LANDSCAPE},margin:{top:540,right:540,bottom:540,left:540}}},children:[
     ...["Republic of the Philippines","Department of Education",view.profile.region,view.profile.division.toUpperCase(),view.profile.school.toUpperCase()].map((text,index)=>paragraph(text,index>=3)),
     new Paragraph({spacing:{before:180,after:120},alignment:AlignmentType.CENTER,children:[new TextRun({text:"TABLE OF SPECIFICATIONS",bold:true,font:"Times New Roman",size:24})]}),
-    paragraph(`${view.subject}     Grade ${assessment.grade}     TERM ${assessment.term}     School Year ${view.schoolYear}`,true),paragraph(tosFormatLabel(format)),table,new Paragraph({spacing:{after:100}}),
+    paragraph(`${view.subject}     Grade ${assessment.grade}     TERM ${assessment.term}     School Year ${view.schoolYear}`,true),paragraph(`${tosFormatLabel(format)} — Total Items: ${assessment.totalItems}`),table,new Paragraph({spacing:{after:100}}),
     new Table({width:{size:100,type:WidthType.PERCENTAGE},rows:[new TableRow({children:[signatureCell("Prepared by:",view.profile.teacherName,view.profile.position),signatureCell("Checked and Reviewed by:","",""),signatureCell("Approved:",view.profile.schoolHead,view.profile.schoolHeadPosition)]})]}),
   ]}]});
 }
 
 export function buildTOSPdf(assessment: Assessment, format: TOSFormat) {
+  assertValidTOS(assessment);
   const view=getTOSPresentation(assessment);
   const pdf=new jsPDF({orientation:"landscape",unit:"pt",format:"a4"});
   const width=pdf.internal.pageSize.getWidth();
@@ -37,7 +40,7 @@ export function buildTOSPdf(assessment: Assessment, format: TOSFormat) {
   ["Republic of the Philippines","Department of Education",view.profile.region,view.profile.division.toUpperCase(),view.profile.school.toUpperCase()].forEach((text,index)=>pdf.text(text,width/2,25+index*12,{align:"center"}));
   pdf.setFont("times","bold");pdf.setFontSize(12);pdf.text("TABLE OF SPECIFICATIONS",width/2,99,{align:"center"});
   pdf.setFontSize(10);pdf.setFont("times","normal");pdf.text(`${view.subject}     Grade ${assessment.grade}     TERM ${assessment.term}     School Year ${view.schoolYear}`,width/2,114,{align:"center"});
-  pdf.text(tosFormatLabel(format),width/2,128,{align:"center"});
+  pdf.text(`${tosFormatLabel(format)} — Total Items: ${assessment.totalItems}`,width/2,128,{align:"center"});
   const body:RowInput[]=[];
   view.rows.forEach(row=>{
     const span=format==="item-placement"?2:1;
@@ -55,6 +58,7 @@ export function buildTOSPdf(assessment: Assessment, format: TOSFormat) {
 }
 
 export function tosPrintHtml(assessment:Assessment,format:TOSFormat) {
+  assertValidTOS(assessment);
   const view=getTOSPresentation(assessment);
   const escape=(value:unknown)=>String(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   const rows=view.rows.map(row=>{

@@ -1,6 +1,16 @@
 node_modules
+/.powerpoint-qa/
+/.cot-qa/
+/.cot-reference-qa/
+ilaw-cot-indicators.json
+/public/cot-response-schema.json
+/public/cot/pdf.worker.min.mjs
 .next
 out
 .sites-runtime
 *.tgz
 .env*
+!.env.example
+ilaw-auth.env
+ilaw-auth-state/
+ilaw-ai-config.php

@@ -1,4 +1,4 @@
-import { AnswerChoice, Assessment, AssessmentCompetency, AssessmentQuestion, AssessmentTerm, BloomLevel, TOSRow, bloomLevels } from "@/types/assessment";
+import { Assessment, AssessmentCompetency, AssessmentQuestion, AssessmentTerm, BloomLevel, TOSRow, bloomLevels } from "@/types/assessment";
 import { GradeLevel, LearningArea } from "@/types/lesson-plan";
 
 const bloomWeights: Record<BloomLevel, number> = {
@@ -9,6 +9,15 @@ const bloomWeights: Record<BloomLevel, number> = {
   Evaluating: 10,
   Creating: 10,
 };
+
+export function parseAssessmentTotal(value: string): number {
+  const text = value.trim();
+  const total = Number(text);
+  if (!/^\d+$/.test(text) || !Number.isInteger(total) || total < 1 || total > 200) {
+    throw new Error("Enter a whole-number total from 1 to 200 items.");
+  }
+  return total;
+}
 
 function allocate(total: number, weights: number[]) {
   const sum = weights.reduce((value, item) => value + item, 0) || weights.length;
@@ -26,7 +35,8 @@ function emptyDistribution(): Record<BloomLevel, number> {
 }
 
 export function generateTOS(competencies: AssessmentCompetency[], totalItems: number, teachingDays?: number[]): TOSRow[] {
-  if (!competencies.length || totalItems < 1) return [];
+  if (!Number.isInteger(totalItems) || totalItems < 1 || totalItems > 200) throw new Error("Enter a whole-number total from 1 to 200 items.");
+  if (!competencies.length) return [];
   const days = competencies.map((_, index) => Math.max(0.25, teachingDays?.[index] || 1));
   const rowTotals = allocate(totalItems, days);
   const globalCounts = allocate(totalItems, bloomLevels.map((level) => bloomWeights[level]));
@@ -79,92 +89,41 @@ export function tosTotal(rows: TOSRow[]) {
   return rows.reduce((sum, row) => sum + row.totalItems, 0);
 }
 
-function stem(competency: string) {
-  return competency.trim().replace(/[.]$/, "").replace(/^(discuss|identify|explain|determine|differentiate|distinguish|perform|apply|create|utilize|demonstrate|recognize|examine|illustrate|develop|familiarize themselves with)\s+/i, "");
-}
-
-function isTagalog(value: string) {
-  return /\b(ang|mga|ng|sa|na|at|bilang|pamamagitan|natutukoy|naipapaliwanag|nasusuri|naisasagawa|nakabubuo)\b/i.test(value);
-}
-
-function promptFor(level: BloomLevel, competency: string, item: number, revision: number) {
-  const topic = stem(competency);
-  const alternate = revision > 0 ? " another appropriate example of" : "";
-  if (isTagalog(competency)) {
-    const prompts: Record<BloomLevel, string> = {
-      Remembering: `Alin ang wastong pahayag tungkol sa ${topic}?`,
-      Understanding: `Aling paliwanag ang pinakamahusay na nagpapakita ng pag-unawa sa ${topic}?`,
-      Applying: `Sa isang pang-araw-araw na sitwasyon, paano wastong mailalapat ang ${topic}?`,
-      Analyzing: `Aling pagsusuri ang nagpapakita ng ugnayan ng mahahalagang ideya sa ${topic}?`,
-      Evaluating: `Aling pasya ang may pinakamalinaw na batayan kaugnay ng ${topic}?`,
-      Creating: `Aling plano ang pinakamainam na malikha upang maipakita ang ${topic}?`,
-    };
-    return prompts[level];
+// Check the counts AND numbering, not just a cached row total, at every output boundary.
+export function tosError(assessment: Assessment): string | null {
+  const target = assessment.totalItems;
+  if (!Number.isInteger(target) || target < 1 || target > 200) return "Enter a whole-number total from 1 to 200 items.";
+  const ids = new Set(assessment.tos.map(row => row.competencyId));
+  if (!assessment.tos.length || ids.size !== assessment.tos.length || ids.size !== assessment.competencies.length) return "The TOS must contain one row for each selected competency.";
+  for (const row of assessment.tos) {
+    if (!Number.isFinite(row.teachingDays) || row.teachingDays <= 0) return "Teaching sessions must be a positive number.";
+    const competency = assessment.competencies.find(item => item.id === row.competencyId);
+    if (!competency || competency.text !== row.competency) return "TOS competency wording must match the selected competencies.";
+    const counts = bloomLevels.map(level => row.distribution[level]);
+    if (counts.some(count => !Number.isInteger(count) || count < 0)) return "Bloom-level counts must be non-negative whole numbers.";
+    if (counts.reduce((sum, count) => sum + count, 0) !== row.totalItems || row.itemNumbers.length !== row.totalItems) return "TOS row counts and item placement do not match. Use Automatic distribution to recalculate.";
   }
-  const prompts: Record<BloomLevel, string> = {
-    Remembering: `Which statement correctly identifies${alternate} ${topic}?`,
-    Understanding: `Which explanation best shows an understanding of ${topic}?`,
-    Applying: `Which action correctly applies ${topic} in a practical situation?`,
-    Analyzing: `Which analysis best connects the important ideas in ${topic}?`,
-    Evaluating: `Which decision is best supported by appropriate criteria for ${topic}?`,
-    Creating: `Which plan would best demonstrate ${topic}?`,
-  };
-  return `${prompts[level]}${revision ? ` (Version ${revision + 1})` : ""}`;
+  const numbers = assessment.tos.flatMap(row => row.itemNumbers).sort((a, b) => a - b);
+  if (tosTotal(assessment.tos) !== target) return `The TOS must contain exactly ${target} items, not ${tosTotal(assessment.tos)}. Use Automatic distribution to recalculate.`;
+  if (numbers.length !== target || numbers.some((number, index) => number !== index + 1)) return `Item placement must use every number from 1 to ${target} exactly once.`;
+  if (assessment.questions.length) {
+    if (assessment.questions.length !== target || assessment.questions.some((question, index) => question.number !== index + 1)) return `The test and TOS must both contain exactly ${target} numbered items.`;
+    for (const row of assessment.tos) {
+      const questions = assessment.questions.filter(question => question.competencyId === row.competencyId);
+      if (questions.length !== row.totalItems || questions.some(question => question.competency !== row.competency || !row.itemNumbers.includes(question.number)) || bloomLevels.some(level => questions.filter(question => question.bloomLevel === level).length !== row.distribution[level])) return "TOS item placement must match the questions and their Bloom levels.";
+    }
+  }
+  return null;
 }
 
-function choiceSet(competency: string, level: BloomLevel, correctAnswer: AnswerChoice, revision: number) {
-  const topic = stem(competency);
-  const tagalog = isTagalog(competency);
-  const correct = tagalog
-    ? `Isang tugon na tama, may malinaw na batayan, at angkop sa ${topic}.`
-    : `A response that is accurate, well-supported, and appropriate for ${topic}.`;
-  const distractors = tagalog
-    ? [
-        `Isang tugon na hindi isinasaalang-alang ang mahahalagang ideya ng ${topic}.`,
-        `Isang tugon na nakabatay lamang sa hula at walang sapat na paliwanag.`,
-        `Isang tugon na walang kaugnayan sa hinihinging kasanayan o sitwasyon.`,
-      ]
-    : [
-        `A response that overlooks the essential ideas related to ${topic}.`,
-        `A response based only on guessing, without adequate explanation or evidence.`,
-        `A response unrelated to the required ${level.toLowerCase()} skill or situation.`,
-      ];
-  const rotated = [...distractors.slice(revision % 3), ...distractors.slice(0, revision % 3)];
-  const choices = {} as Record<AnswerChoice, string>;
-  let distractorIndex = 0;
-  (["A", "B", "C", "D"] as AnswerChoice[]).forEach((letter) => {
-    choices[letter] = letter === correctAnswer ? correct : rotated[distractorIndex++];
-  });
-  return choices;
+export function assertValidTOS(assessment: Assessment) {
+  const error = tosError(assessment);
+  if (error) throw new Error(error);
 }
 
-export function generateQuestion(competencyId: string, competency: string, bloomLevel: BloomLevel, number: number, revision = 0): AssessmentQuestion {
-  const answers: AnswerChoice[] = ["A", "B", "C", "D"];
-  const correctAnswer = answers[(number + revision - 1) % answers.length];
-  return {
-    id: `question-${Date.now()}-${number}-${revision}-${Math.random().toString(36).slice(2, 7)}`,
-    number,
-    question: promptFor(bloomLevel, competency, number, revision),
-    choices: choiceSet(competency, bloomLevel, correctAnswer, revision),
-    correctAnswer,
-    competencyId,
-    competency,
-    bloomLevel,
-    revision,
-  };
-}
-
-export function generateQuestions(rows: TOSRow[]): AssessmentQuestion[] {
-  const questions: AssessmentQuestion[] = [];
-  rows.forEach((row) => {
-    bloomLevels.forEach((level) => {
-      for (let index = 0; index < row.distribution[level]; index += 1) {
-        const number = questions.length + 1;
-        questions.push(generateQuestion(row.competencyId, row.competency, level, number));
-      }
-    });
-  });
-  return questions;
+export function resizeAssessmentTOS(assessment: Assessment, totalItems: number): Assessment {
+  const tos = generateTOS(assessment.competencies, totalItems, assessment.tos.map(row => row.teachingDays));
+  return { ...assessment, totalItems, tos, tosMode: "automatic", questions: [], testReview: undefined, updatedAt: new Date().toISOString() };
 }
 
 export function rebuildTOSFromQuestions(rows: TOSRow[], questions: AssessmentQuestion[]): TOSRow[] {
@@ -183,7 +142,7 @@ export function rebuildTOSFromQuestions(rows: TOSRow[], questions: AssessmentQue
 
 export function createAssessment(input: { title: string; grade: GradeLevel; subject: LearningArea; term: AssessmentTerm; week?: number; totalItems: number; competencies: AssessmentCompetency[] }): Assessment {
   const now = new Date().toISOString();
-  return {
+  const assessment: Assessment = {
     id: `assessment-${Date.now()}`,
     title: input.title,
     grade: input.grade,
@@ -200,4 +159,6 @@ export function createAssessment(input: { title: string; grade: GradeLevel; subj
     createdAt: now,
     updatedAt: now,
   };
+  assertValidTOS(assessment);
+  return assessment;
 }

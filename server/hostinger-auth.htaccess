@@ -1,0 +1,19 @@
+# Activation file: REVIEW/merge with existing Hostinger rules, then name .htaccess.
+# Back up .htaccess and .htpasswd BEFORE replacing the shared Basic Auth login.
+Options -Indexes -MultiViews
+DirectoryIndex ilaw-gateway.php
+<IfModule mod_headers.c>
+  Header always set Cache-Control "no-store, private, max-age=0"
+  Header always set X-LiteSpeed-Cache-Control "no-cache"
+  Header always set X-Content-Type-Options "nosniff"
+</IfModule>
+RewriteEngine On
+# HTTPS only. Production cookies always carry Secure.
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://ilaw.lenybuilds.com%{REQUEST_URI} [R=308,L]
+# Deny hidden/private files even when authenticated.
+RewriteRule (^|/)\. - [F,L]
+# These PHP entry points enforce their own session/CSRF guards.
+RewriteRule ^(?:ilaw-gateway\.php|api/session\.php|api/assessment\.php)$ - [L]
+# No -f/-d bypass: even index.html, RSC payloads and application JS require authentication.
+RewriteRule ^ ilaw-gateway.php [L]

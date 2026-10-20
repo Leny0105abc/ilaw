@@ -4,6 +4,16 @@ export type AssessmentTerm = 1 | 2 | 3;
 export type BloomLevel = "Remembering" | "Understanding" | "Applying" | "Analyzing" | "Evaluating" | "Creating";
 export type AnswerChoice = "A" | "B" | "C" | "D";
 export type TOSFormat = "standard" | "item-placement";
+export type Difficulty = "Easy" | "Moderate" | "Difficult";
+export type DifficultySettings = {
+  level: Difficulty | "Mixed";
+  percentages: Record<Difficulty, number>;
+};
+export type TestReview = {
+  fingerprint: string;
+  reviewedAt: string;
+  reviewer: "ai" | "teacher";
+};
 
 export const bloomLevels: BloomLevel[] = ["Remembering", "Understanding", "Applying", "Analyzing", "Evaluating", "Creating"];
 
@@ -33,6 +43,8 @@ export type AssessmentQuestion = {
   competency: string;
   bloomLevel: BloomLevel;
   revision: number;
+  difficulty?: Difficulty;
+  rationale?: string;
 };
 
 export type Assessment = {
@@ -52,6 +64,8 @@ export type Assessment = {
   profile?: TeacherProfile;
   tos: TOSRow[];
   questions: AssessmentQuestion[];
+  difficulty?: DifficultySettings;
+  testReview?: TestReview;
   createdAt: string;
   updatedAt: string;
 };

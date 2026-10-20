@@ -1,0 +1,26 @@
+{
+  "schoolYear":"2026-2027",
+  "version":"DM 089 s 2025 Tables 2 to 4 and 7 to 8 / DO 042 s 2017",
+  "verifiedAt":"2026-10-19",
+  "source":"DepEd Memorandum No. 089, s. 2025, paragraphs 11 to 20 and Tables 2 to 4, 7 to 8; exact wording and domains/strands from DepEd Order No. 042, s. 2017",
+  "sourceUrl":"https://www.deped.gov.ph/wp-content/uploads/DM_s2025_089r.pdf",
+  "wordingSourceUrl":"https://www.deped.gov.ph/wp-content/uploads/2017/08/DO_s2017_042.pdf",
+  "sourcePage":"DM PDF pp. 7 to 9, 13 to 14; DO PDF pp. 12 to 14, 16 to 17, 21",
+  "notice":"Master Teacher III is not preconfigured because Table 2/paragraph 15 and Table 10 in DM 089 s. 2025 contain conflicting career-stage labels. Import a verified applicable rating sheet or clarification. Other school years and COT-RSP require separately verified imports. Recheck applicable later issuances with the observer.",
+  "groups":[
+    {"positions":["Teacher I","Teacher II","Teacher III"],"careerStage":"Beginning towards Proficient","suffix":"2"},
+    {"positions":["Teacher IV","Teacher V","Teacher VI","Teacher VII"],"careerStage":"Proficient","suffix":"2"},
+    {"positions":["Master Teacher I","Master Teacher II"],"careerStage":"Highly Proficient","suffix":"3"}
+  ],
+  "rows":[
+    {"prefix":"1.1","domain":"Content Knowledge and Pedagogy","strand":"Content knowledge and its application within and across curriculum areas","cycles":["1st","2nd"],"2":"Apply knowledge of content within and across curriculum teaching areas.","3":"Model effective applications of content knowledge within and across curriculum teaching areas."},
+    {"prefix":"1.4","domain":"Content Knowledge and Pedagogy","strand":"Strategies for promoting literacy and numeracy","cycles":["1st","2nd"],"2":"Use a range of teaching strategies that enhance learner achievement in literacy and numeracy skills.","3":"Evaluate with colleagues the effectiveness of teaching strategies that promote learner achievement in literacy and numeracy."},
+    {"prefix":"1.5","domain":"Content Knowledge and Pedagogy","strand":"Strategies for developing critical and creative thinking, as well as other higher-order thinking skills","cycles":["1st","2nd"],"2":"Apply a range of teaching strategies to develop critical and creative thinking, as well as other higher-order thinking skills.","3":"Develop and apply effective teaching strategies to promote critical and creative thinking, as well as other higher-order thinking skills."},
+    {"prefix":"1.6","domain":"Content Knowledge and Pedagogy","strand":"Mother Tongue, Filipino and English in teaching and learning","cycles":["1st"],"2":"Display proficient use of Mother Tongue, Filipino and English to facilitate teaching and learning.","3":"Model and support colleagues in the proficient use of Mother Tongue, Filipino and English to improve teaching and learning, as well as to develop the learners’ pride of their language, heritage and culture."},
+    {"prefix":"2.1","domain":"Learning Environment","strand":"Learner safety and security","cycles":["1st"],"2":"Establish safe and secure learning environments to enhance learning through the consistent implementation of policies, guidelines and procedures.","3":"Exhibit effective strategies that ensure safe and secure learning environments to enhance learning through the consistent implementation of policies, guidelines and procedures."},
+    {"prefix":"2.2","domain":"Learning Environment","strand":"Fair learning environment","cycles":["1st"],"2":"Maintain learning environments that promote fairness, respect and care to encourage learning.","3":"Exhibit effective practices to foster learning environments that promote fairness, respect and care to encourage learning."},
+    {"prefix":"3.2","domain":"Diversity of Learners","strand":"Learners’ linguistic, cultural, socio-economic and religious backgrounds","cycles":["2nd"],"2":"Establish a learner-centered culture by using teaching strategies that respond to their linguistic, cultural, socio-economic and religious backgrounds.","3":"Exhibit a learner-centered culture that promotes success by using effective teaching strategies that respond to their linguistic, cultural, socio-economic and religious backgrounds."},
+    {"prefix":"3.5","domain":"Diversity of Learners","strand":"Learners from indigenous groups","cycles":["2nd"],"2":"Adapt and use culturally appropriate teaching strategies to address the needs of learners from indigenous groups.","3":"Develop and apply teaching strategies to address effectively the needs of learners from indigenous groups."},
+    {"prefix":"5.3","domain":"Assessment and Reporting","strand":"Feedback to improve learning","cycles":["2nd"],"2":"Use strategies for providing timely, accurate and constructive feedback to improve learner performance.","3":"Use effective strategies for providing timely, accurate and constructive feedback to encourage learners to reflect on and improve their own learning."}
+  ]
+}

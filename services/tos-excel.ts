@@ -1,9 +1,11 @@
 import type { Workbook } from "exceljs";
 import { Assessment, TOSFormat, bloomLevels } from "@/types/assessment";
 import { getTOSPresentation, itemPlacementText } from "@/services/tos-presentation";
+import { assertValidTOS } from "@/services/assessment-generator";
 
 // ExcelJS runs in the web app so teachers can download a native, editable XLSX.
 export async function buildTOSWorkbook(assessment: Assessment, format: TOSFormat, seal?: string): Promise<Workbook> {
+  assertValidTOS(assessment);
   const ExcelJS = await import("exceljs");
   const workbook = new ExcelJS.default.Workbook();
   workbook.creator = assessment.profile?.teacherName || "ILAW";
@@ -29,6 +31,8 @@ export async function buildTOSWorkbook(assessment: Assessment, format: TOSFormat
   header.forEach((text,index)=>merge(`A${5+index}:N${5+index}`,text,index>=3));
   merge("A11:N11","TABLE OF SPECIFICATIONS",true,12);
   merge("A12:C12",view.subject,true); merge("D12:E12",String(assessment.grade),true);
+  merge("F12:G12","Total Items",true); merge("H12:I12",String(assessment.totalItems),true);
+  sheet.getCell("H12").value=assessment.totalItems;
   merge("J12:K12",`TERM ${assessment.term}`,true); merge("M12:N12",view.schoolYear,true);
   merge("A13:C13","Subject"); merge("D13:E13","Grade"); merge("J13:K13","Grading Period"); merge("M13:N13","School Year");
   sheet.getRow(12).height=30; sheet.getRow(14).height=9;
@@ -47,7 +51,7 @@ export async function buildTOSWorkbook(assessment: Assessment, format: TOSFormat
       sheet.getCell(r,col+7).value=row.distribution[level];
       if(end>r) sheet.getCell(end,col+7).value=itemPlacementText(row.placement[level]);
     });
-    sheet.getCell(r,13).value={formula:`F${r}/$F$${totalRow}*${assessment.totalItems}`,result:row.computed}; sheet.getCell(r,13).numFmt="0.00";
+    sheet.getCell(r,13).value={formula:`F${r}/$F$${totalRow}*$H$12`,result:row.computed}; sheet.getCell(r,13).numFmt="0.00";
     sheet.getCell(r,14).value={formula:`SUM(G${r}:L${r})`,result:row.totalItems};
     sheet.getRow(r).height=Math.max(28,Math.ceil(row.competency.length/78)*16-(end>r?14:0));
     if(end>r) sheet.getRow(end).height=Math.max(24,Math.ceil(Math.max(...bloomLevels.map(level=>itemPlacementText(row.placement[level]).length))/18)*14);
