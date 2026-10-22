@@ -8,8 +8,15 @@ This extends ILAW; existing login, curriculum, lesson plans and assessments are 
 2. Choose grade, subject, term and week. Select the official competencies and a lesson title; optionally attach a saved lesson plan and factual lesson notes.
 3. Choose 15, 20, 25 or 30 slides and a four-day or continuous-week organization.
 4. The default method creates a prompt for Gemini/Copilot. Copy it, obtain the complete JSON response, paste it back and import. Nothing is sent to an external AI automatically. Check lesson notes for personal information before sharing them.
-5. Review/edit the slides, tables, speaker notes and five quiz questions. Regenerate requests only the selected slide; the final answer key is derived from the quiz.
-6. Save explicitly, download an editable PPTX, or use **Print / Save PDF**. The PDF option uses the browser's print dialog and requires pop-ups to be allowed.
+5. Edit the slides, tables, speaker notes and five quiz questions. Regenerate requests only the selected slide; the final answer key is derived from the quiz.
+6. Choose **Review before download**. The review screen shows every slide as it will appear in the PowerPoint, with speaker notes and quiz answers, plus automatic checks (layout and official competency, real-life situation, quiz and answer key, picture placeholders, speaker notes). Approval is enabled only after every slide has been viewed, no check fails, and the teacher ticks the three confirmations.
+7. After approval, download an editable PPTX or use **Print / Save PDF**. The PDF option uses the browser's print dialog and requires pop-ups to be allowed. Approval is saved with the presentation for that exact content: editing any slide afterwards shows **Changed since approval** and locks downloads until it is reviewed again. In **Saved PowerPoints**, unapproved decks show **Review to download** instead of **Download**; duplicates start unapproved.
+
+## Real-life situation slide
+
+Every generated deck includes a **Real-Life Situation** slide (Day 3 in the four-day organization; before the final activity in the continuous organization). It has a familiar Philippine setting, a short 3–4 sentence story where an ordinary person must use the lesson to solve a problem or make a decision, and 2–3 guide questions under **Think & discuss**. Limits: setting 80, story 480 and each question 140 characters; long text is automatically sized to fit. The prompt also asks for one situation-based quiz item.
+
+Teachers can edit the setting, story and questions, regenerate only that slide, or use **Add real-life situation** to insert another (blank) one. A deck cannot be approved for download without at least one complete situation slide. Stories use fictional names; teachers should check that each situation is realistic and appropriate for their learners.
 
 Saved presentations use `ilaw.powerpoints.v1` in this browser's local storage. They are **not MySQL/cloud storage** and are not synced between devices. Competency wording is saved with each presentation. Clearing browser site data removes local records; downloading PPTX creates a separate document copy.
 
@@ -19,7 +26,7 @@ The secure method reuses `/api/assessment.php` with `operation: "powerpoint"`, a
 
 ## Verification
 
-Run `pnpm verify:powerpoint`, `pnpm verify:assessment`, `pnpm verify:tos`, `pnpm verify:auth`, `php scripts/verify-powerpoint-ai.php`, and `pnpm build`.
+Run `pnpm verify:powerpoint` (includes the real-life situation slot and review gate), `pnpm verify:assessment`, `pnpm verify:tos`, `pnpm verify:auth`, `php scripts/verify-powerpoint-ai.php`, and `pnpm build`.
 
 Automated AI transport is mocked. These tests prove counts, parsing, quiz/key consistency, persistence, endpoint contracts and editable exports, **not live provider factual quality**. Teachers must review AI-generated lesson content.
 
