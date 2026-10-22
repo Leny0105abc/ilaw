@@ -1,7 +1,7 @@
 "use client";
 
 import { KeyboardEvent, useEffect, useMemo, useState } from "react";
-import { Clock3, Copy, FileCheck2, FilePlus2, Files, MoreHorizontal, Search, Trash2 } from "lucide-react";
+import { Clock3, Copy, FileCheck2, FilePlus2, FileText, Files, MoreHorizontal, Search, Trash2 } from "lucide-react";
 import { LessonPlan } from "@/types/lesson-plan";
 import { areaAbbreviation, termLabel } from "@/data/curriculum";
 
@@ -13,9 +13,10 @@ type DashboardProps = {
   onOpen: (plan: LessonPlan) => void;
   onDelete: (id: string) => void;
   onDeleteMany: (ids: string[]) => void;
+  onCreateLas: (plan: LessonPlan) => void;
 };
 
-export function Dashboard({ plans, stats, compact, onCreate, onOpen, onDelete, onDeleteMany }: DashboardProps) {
+export function Dashboard({ plans, stats, compact, onCreate, onOpen, onDelete, onDeleteMany, onCreateLas }: DashboardProps) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("All");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -93,6 +94,7 @@ export function Dashboard({ plans, stats, compact, onCreate, onOpen, onDelete, o
           <span className="status-cell"><i className={plan.status.toLowerCase()} />{plan.status}</span>
           <span className="modified-cell">{new Date(plan.updatedAt).toLocaleDateString()}</span>
           <span className="row-actions">
+            <button title="Create Learning Activity Sheets (LAS)" aria-label={`Create LAS for ${plan.title}`} onClick={(event) => { event.stopPropagation(); onCreateLas(plan); }}><FileText /></button>
             <button title="Duplicate" aria-label={`Duplicate ${plan.title}`} onClick={(event) => { event.stopPropagation(); const copy = { ...plan, id: `${plan.id}-copy-${Date.now()}`, title: `${plan.title} (Copy)`, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; onOpen(copy); }}><Copy /></button>
             <button title="Delete" aria-label={`Delete ${plan.title}`} onClick={(event) => { event.stopPropagation(); if (confirm("Delete this lesson plan from this device?")) onDelete(plan.id); }}><Trash2 /></button>
             <MoreHorizontal aria-hidden="true" />

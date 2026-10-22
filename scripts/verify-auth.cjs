@@ -31,7 +31,11 @@ async function main() {
   await new Promise((resolve,reject)=>{socket.once('error',reject);socket.listen(previewPort,'127.0.0.1',resolve);});
   const port=socket.address().port;
   await new Promise(resolve=>socket.close(resolve));
-  const origin=`http://127.0.0.1:${port}`;
+  // Browser cookies are host-scoped, not port-scoped. Use localhost for an
+  // isolated preview when another fixture preview is open on 127.0.0.1.
+  const previewHost = preview ? process.env.ILAW_PREVIEW_HOST || '127.0.0.1' : '127.0.0.1';
+  if (!['127.0.0.1', 'localhost'].includes(previewHost)) throw new Error('Preview host must be loopback only.');
+  const origin=`http://${previewHost}:${port}`;
   const env={...process.env,ILAW_APP_ENV:'development',ILAW_ADMIN_USERNAME:username,ILAW_ADMIN_PASSWORD_HASH:hash,SESSION_SECRET:secret,ILAW_SITE_ORIGIN:origin,ILAW_DEV_WEB_ROOT:webRoot};
   // Do not log credentials, request bodies, cookie values, or complete session responses.
   let logs='';

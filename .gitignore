@@ -2,6 +2,7 @@ node_modules
 /.powerpoint-qa/
 /.cot-qa/
 /.cot-reference-qa/
+/.las-qa/
 ilaw-cot-indicators.json
 /public/cot-response-schema.json
 /public/cot/pdf.worker.min.mjs

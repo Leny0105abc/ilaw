@@ -15,7 +15,7 @@
 }
 
 .plan-row {
-  grid-template-columns: 34px minmax(0, 2fr) minmax(0, 1.25fr) 0.7fr 0.8fr 90px;
+  grid-template-columns: 34px minmax(0, 2fr) minmax(0, 1.25fr) 0.7fr 0.8fr 120px;
 }
 
 .plan-row.selected,
@@ -54,7 +54,7 @@
   }
 
   .plan-row {
-    grid-template-columns: 34px minmax(0, 1.7fr) minmax(0, 1fr) 0.7fr 70px;
+    grid-template-columns: 34px minmax(0, 1.7fr) minmax(0, 1fr) 0.7fr 110px;
   }
 
   .modified-cell {

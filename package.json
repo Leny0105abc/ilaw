@@ -14,7 +14,8 @@
     "verify:powerpoint": "node scripts/verify-powerpoint.cjs",
     "verify:cot": "node scripts/verify-cot.cjs",
     "verify:cot-workflow": "node scripts/verify-cot-workflow.cjs",
-    "verify:cot-ilaw": "node scripts/verify-cot-ilaw.cjs"
+    "verify:cot-ilaw": "node scripts/verify-cot-ilaw.cjs",
+    "verify:las": "node scripts/verify-las.cjs"
   },
   "dependencies": {
     "docx": "^9.5.1",

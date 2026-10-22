@@ -24,16 +24,22 @@ import { CotLesson, IndicatorLibrary } from "@/types/cot";
 import { loadCotLessons, saveCotLessons } from "@/services/cot-storage";
 import { loadIndicatorLibrary } from "@/services/cot-library";
 import { cotRequestId } from "@/services/cot-generator";
+import { LearningActivitySheets } from "@/types/las";
+import { loadLas, saveLas } from "@/services/las-storage";
+import "@/app/las.css";
+const LasBuilder=dynamic(()=>import("@/components/las-builder").then(m=>m.LasBuilder));
+const LasLibrary=dynamic(()=>import("@/components/las-library").then(m=>m.LasLibrary));
 const CotBuilder=dynamic(()=>import("@/components/cot-builder").then(m=>m.CotBuilder));
 const CotLibrary=dynamic(()=>import("@/components/cot-library").then(m=>m.CotLibrary));
 const CotIndicators=dynamic(()=>import("@/components/cot-indicators").then(m=>m.CotIndicators));
 
-type View = "dashboard" | "create" | "plans" | "assessment-create" | "assessments" | "curriculum" | "settings" | "editor" | "assessment-editor" | "powerpoint-create" | "powerpoints" | "powerpoint-editor" | "cot-create" | "cot-lessons" | "cot-editor" | "cot-indicators";
+type View = "dashboard" | "create" | "plans" | "assessment-create" | "assessments" | "curriculum" | "settings" | "editor" | "assessment-editor" | "powerpoint-create" | "powerpoints" | "powerpoint-editor" | "cot-create" | "cot-lessons" | "cot-editor" | "cot-indicators" | "las-create" | "las-saved" | "las-editor";
 const nav = [
   ["dashboard", "Dashboard", LayoutDashboard], ["create", "Create Lesson Plan", FilePlus2], ["plans", "Lesson Plans", Files],
   ["assessment-create", "Create Assessment", ClipboardList], ["assessments", "Saved Assessments", FolderOpen],
   ["powerpoint-create", "Create PowerPoint", Presentation], ["powerpoints", "Saved PowerPoints", FolderOpen],
   ["cot-create", "Create COT", FilePlus2], ["cot-lessons", "Saved COT Lessons", FolderOpen], ["cot-indicators", "PMES Indicators", ClipboardList],
+  ["las-create", "Create LAS", FilePlus2], ["las-saved", "Saved LAS", FolderOpen],
   ["curriculum", "Curriculum", GraduationCap], ["settings", "Settings", Settings],
 ] as const;
 
@@ -60,6 +66,12 @@ export function AppShell() {
   const [cotCreateKey,setCotCreateKey]=useState(0);
   const [cotLibrary,setCotLibrary]=useState<IndicatorLibrary|null>(null);
   const [cotLibraryError,setCotLibraryError]=useState("");
+  const [lasValues,setLasValues]=useState<LearningActivitySheets[]>([]);
+  const [lasError,setLasError]=useState("");
+  const [lasLoadBlocked,setLasLoadBlocked]=useState(false);
+  const [activeLas,setActiveLas]=useState<LearningActivitySheets|null>(null);
+  const [lasSeed,setLasSeed]=useState<LessonPlan|null>(null);
+  const [lasCreateKey,setLasCreateKey]=useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,8 +82,9 @@ export function AppShell() {
         if (cancelled) return;
         if (!loaded) {
           setPlans(loadPlans()); setAssessments(loadAssessments()); setPowerpoints(loadPowerPoints()); setProfile(loadProfile());setCotLessons(loadCotLessons());
+          try { setLasValues(loadLas()); } catch { setLasLoadBlocked(true); setLasError("Saved LAS could not be read. Existing device data has not been changed. Do not clear site data."); }
           void loadIndicatorLibrary().then(value=>{if(!cancelled)setCotLibrary(value);}).catch(error=>{if(!cancelled)setCotLibraryError(error instanceof Error?error.message:"Could not load the indicator library.");});
-          const views: Record<string, View> = { "/dashboard": "dashboard", "/lesson-plans": "plans", "/assessment": "assessment-create", "/assessments": "assessments", "/powerpoint": "powerpoint-create", "/powerpoints": "powerpoints", "/cot":"cot-create", "/cot-lessons":"cot-lessons", "/cot-indicators":"cot-indicators", "/settings": "settings", "/curriculum": "curriculum" };
+          const views: Record<string, View> = { "/dashboard": "dashboard", "/lesson-plans": "plans", "/assessment": "assessment-create", "/assessments": "assessments", "/powerpoint": "powerpoint-create", "/powerpoints": "powerpoints", "/cot":"cot-create", "/cot-lessons":"cot-lessons", "/cot-indicators":"cot-indicators", "/settings": "settings", "/curriculum": "curriculum", "/las":"las-create", "/saved-las":"las-saved" };
           setView(views[window.location.pathname.replace(/\/$/, "")] || "dashboard");
           loaded = true;
         }
@@ -113,7 +126,13 @@ export function AppShell() {
   function openCot(p:CotLesson){setActiveCot(p);setView("cot-editor");}
   function duplicateCot(p:CotLesson){const now=new Date().toISOString();const copy={...structuredClone(p),id:crypto.randomUUID(),title:`${p.title} (Copy)`,status:"Draft" as const,teacherReviewed:false,alignments:p.alignments.map(a=>({...structuredClone(a),teacherReviewed:false})),createdAt:now,updatedAt:now};copy.generationFingerprint=cotRequestId(copy);copy.materialFingerprint="";saveCot(copy);openCot(copy);}
   function refreshCotLibrary(){setCotLibraryError("");void loadIndicatorLibrary().then(setCotLibrary).catch(error=>setCotLibraryError(error instanceof Error?error.message:"Could not load the indicator library."));}
-  function navigate(next: View) { if (next === "assessment-create") { createAssessment(); setMobileNav(false); return; } if(next==="powerpoint-create"){createPowerPoint();setMobileNav(false);return;}if(next==="cot-create"){createCot();setMobileNav(false);return;} setView(next); setMobileNav(false); }
+  function createLas(plan:LessonPlan|null=null){setActiveLas(null);setLasSeed(plan);setLasCreateKey(n=>n+1);setView("las-create");}
+  function persistLas(next:LearningActivitySheets[]){if(lasLoadBlocked)throw new Error("Saved LAS data could not be read. Export this draft before clearing any site data.");saveLas(next);setLasValues(next);setLasError("");}
+  function saveLasValue(value:LearningActivitySheets){persistLas([value,...lasValues.filter(v=>v.id!==value.id)]);setActiveLas(value);}
+  function openLas(value:LearningActivitySheets){setActiveLas(value);setView("las-editor");}
+  function duplicateLas(value:LearningActivitySheets){try{const now=new Date().toISOString();const copy={...structuredClone(value),id:crypto.randomUUID(),title:`${value.title} (Copy)`,teacherReviewed:false,createdAt:now,updatedAt:now};saveLasValue(copy);openLas(copy);}catch(error){setLasError(error instanceof Error?error.message:"LAS could not be duplicated.");}}
+  function deleteLas(id:string){try{persistLas(lasValues.filter(v=>v.id!==id));}catch(error){setLasError(error instanceof Error?error.message:"LAS could not be deleted.");}}
+  function navigate(next: View) { if(next==="las-create"){createLas();setMobileNav(false);return;} if (next === "assessment-create") { createAssessment(); setMobileNav(false); return; } if(next==="powerpoint-create"){createPowerPoint();setMobileNav(false);return;}if(next==="cot-create"){createCot();setMobileNav(false);return;} setView(next); setMobileNav(false); }
 
   async function logout() {
     setSigningOut(true); setAuthError("");
@@ -126,18 +145,18 @@ export function AppShell() {
   return <div className="app-frame">
     <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
       <div className="brand"><span className="brand-mark"><BookOpenText /></span><div><b>ILAW</b><small>Lesson Plan Generator</small></div><button className="icon-btn close-nav" onClick={() => setMobileNav(false)} aria-label="Close navigation"><X /></button></div>
-      <nav aria-label="Main navigation">{nav.map(([id, label, Icon], index) => <div key={id}>{index === 3 && <span className="nav-group-label">Assessment</span>}{id === "powerpoint-create" && <span className="nav-group-label">Weekly PowerPoint</span>}{id === "cot-create" && <span className="nav-group-label">COT</span>}<button className={view === id || (id === "assessment-create" && view === "assessment-editor") || (id === "powerpoint-create" && view === "powerpoint-editor") || (id === "cot-create" && view === "cot-editor") ? "active" : ""} onClick={() => navigate(id)}><Icon />{label}</button></div>)}</nav>
+      <nav aria-label="Main navigation">{nav.map(([id, label, Icon], index) => <div key={id}>{index === 3 && <span className="nav-group-label">Assessment</span>}{id === "powerpoint-create" && <span className="nav-group-label">Weekly PowerPoint</span>}{id === "cot-create" && <span className="nav-group-label">COT</span>}{id === "las-create" && <span className="nav-group-label">Learning Activity Sheets</span>}<button className={view === id || (id === "assessment-create" && view === "assessment-editor") || (id === "powerpoint-create" && view === "powerpoint-editor") || (id === "cot-create" && view === "cot-editor") || (id === "las-create" && view === "las-editor") ? "active" : ""} onClick={() => navigate(id)}><Icon />{label}</button></div>)}</nav>
       <div className="sidebar-note"><Sparkles /><div><b>Teacher-reviewed AI</b><span>Competencies stay exactly as published.</span></div></div>
       <div className="profile-chip"><span>{profile.teacherName.split(" ").map((w) => w[0]).slice(0,2).join("")}</span><div><b>{profile.teacherName}</b><small>{profile.school}</small></div></div>
       <button className="logout-btn" title="Save unfinished edits before signing out" onClick={() => void logout()} disabled={signingOut}><LogOut />{signingOut ? "Signing out..." : "Logout"}</button>
     </aside>
     {mobileNav && <button className="nav-scrim" onClick={() => setMobileNav(false)} aria-label="Close navigation" />}
     <main>
-      <header className="topbar"><button className="icon-btn menu-btn" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu /></button><div><span className="eyebrow">School Year 2026–2027</span><strong>{view === "editor" ? "Review lesson plan" : view === "assessment-editor" ? "Review assessment" : view === "powerpoint-editor" ? "Review PowerPoint" : view === "cot-editor" ? "Review COT lesson" : nav.find(([id]) => id === view)?.[1] || "ILAW"}</strong></div><div className="save-state"><i />Saved on this device</div></header>
+      <header className="topbar"><button className="icon-btn menu-btn" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu /></button><div><span className="eyebrow">School Year 2026–2027</span><strong>{view === "editor" ? "Review lesson plan" : view === "assessment-editor" ? "Review assessment" : view === "powerpoint-editor" ? "Review PowerPoint" : view === "cot-editor" ? "Review COT lesson" : view === "las-editor" ? "Review LAS" : nav.find(([id]) => id === view)?.[1] || "ILAW"}</strong></div><div className="save-state"><i />Saved on this device</div></header>
       {authError && <p className="form-error" role="alert">{authError}</p>}
-      {view === "dashboard" && <Dashboard plans={plans} stats={stats} onCreate={() => navigate("create")} onOpen={open} onDelete={(id) => deletePlans([id])} onDeleteMany={deletePlans} />}
+      {view === "dashboard" && <Dashboard plans={plans} stats={stats} onCreate={() => navigate("create")} onOpen={open} onDelete={(id) => deletePlans([id])} onDeleteMany={deletePlans} onCreateLas={createLas} />}
       {view === "create" && <CreateLessonPlan profile={profile} onGenerated={(plan) => { save(plan); open(plan); }} />}
-      {view === "plans" && <Dashboard plans={plans} stats={stats} compact onCreate={() => navigate("create")} onOpen={open} onDelete={(id) => deletePlans([id])} onDeleteMany={deletePlans} />}
+      {view === "plans" && <Dashboard plans={plans} stats={stats} compact onCreate={() => navigate("create")} onOpen={open} onDelete={(id) => deletePlans([id])} onDeleteMany={deletePlans} onCreateLas={createLas} />}
       {view === "assessment-create" && <AssessmentBuilder key={assessmentCreateKey} seed={assessmentSeed} onSave={saveAssessment} onBack={() => navigate("assessments")} />}
       {view === "assessments" && <AssessmentLibrary assessments={assessments} onCreate={() => createAssessment()} onOpen={openAssessment} onDuplicate={duplicateAssessment} onDelete={(id) => persistAssessments(assessments.filter((item) => item.id !== id))} />}
       {view === "assessment-editor" && activeAssessment && <AssessmentBuilder initial={activeAssessment} onSave={saveAssessment} onBack={() => navigate("assessments")} />}
@@ -148,9 +167,12 @@ export function AppShell() {
       {view === "cot-editor" && activeCot && <CotBuilder key={activeCot.id} plans={plans} initial={activeCot} library={cotLibrary} libraryError={cotLibraryError} onReload={refreshCotLibrary} onManage={()=>navigate("cot-indicators")} onSave={saveCot} onBack={()=>navigate("cot-lessons")}/>}
       {view === "cot-lessons" && <CotLibrary lessons={cotLessons} onCreate={()=>createCot()} onOpen={openCot} onDuplicate={duplicateCot} onDelete={id=>persistCot(cotLessons.filter(p=>p.id!==id))}/>}
       {view === "cot-indicators" && <CotIndicators library={cotLibrary} error={cotLibraryError} onReload={refreshCotLibrary} onChanged={setCotLibrary}/>}
+      {view === "las-create" && <LasBuilder key={lasCreateKey} plans={plans} seed={lasSeed} onSave={saveLasValue} onBack={()=>navigate("las-saved")}/>}
+      {view === "las-editor" && activeLas && <LasBuilder key={activeLas.id} plans={plans} initial={activeLas} onSave={saveLasValue} onBack={()=>navigate("las-saved")}/>}
+      {view === "las-saved" && <LasLibrary values={lasValues} error={lasError} onCreate={()=>createLas()} onOpen={openLas} onDuplicate={duplicateLas} onDelete={deleteLas}/>}
       {view === "curriculum" && <CurriculumView />}
       {view === "settings" && <SettingsView profile={profile} onSave={(next) => { setProfile(next); saveProfile(next); }} />}
-      {view === "editor" && active && <LessonEditor plan={active} onSave={save} onBack={() => navigate("plans")} onCreateCot={createCot} onCreatePowerPoint={createPowerPoint} onCreateAssessment={(plan) => createAssessment({ grade: plan.grade, subject: plan.area, term: plan.term === "one-term" ? 1 : plan.term, week: plan.week, title: `${plan.title} Summative Test`, competencyTexts: plan.competencyText.split("\n").map((item) => item.replace(/^\d+[.)]\s*/, "").trim()).filter(Boolean) })} />}
+      {view === "editor" && active && <LessonEditor plan={active} onSave={save} onBack={() => navigate("plans")} onCreateLas={createLas} onCreateCot={createCot} onCreatePowerPoint={createPowerPoint} onCreateAssessment={(plan) => createAssessment({ grade: plan.grade, subject: plan.area, term: plan.term === "one-term" ? 1 : plan.term, week: plan.week, title: `${plan.title} Summative Test`, competencyTexts: plan.competencyText.split("\n").map((item) => item.replace(/^\d+[.)]\s*/, "").trim()).filter(Boolean) })} />}
     </main>
   </div>;
 }
