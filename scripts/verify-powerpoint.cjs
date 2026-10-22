@@ -11,6 +11,8 @@ require.extensions['.ts'] = (module,file)=>module._compile(ts.transpileModule(fs
 const g = require('../services/powerpoint-generator.ts');
 const e = require('../services/powerpoint-export.ts');
 const storage = require('../services/powerpoint-storage.ts');
+const review = require('../services/powerpoint-review.ts');
+const layout = require('../services/powerpoint-layout.ts');
 const {competencies} = require('../data/curriculum.ts');
 const {generateLessonPlan} = require('../services/generator.ts');
 const {defaultProfile} = require('../types/lesson-plan.ts');
@@ -21,7 +23,8 @@ function fixture(count=20,organization='four-day'){
   return {...p,slideCount:count,organization,title:'Beauty care tools',competencies:[{id:c.id,text:c.text,source:c.source}]};
 }
 const facts=[['Nail file','Shapes the free edge of a nail.'],['Nail brush','Removes debris around the nails.'],['Cuticle pusher','Gently pushes back cuticles.'],['Nail clipper','Shortens the free edge of a nail.'],['Buffer','Smooths the nail surface.']];
-function response(slots){return {slides:slots.map(slot=>({number:slot.number,title:slot.kind==='quiz'?'Check your understanding':`Lesson ${slot.number}: ${slot.kind}`,bullets:['quiz','title','competency','divider','answer-key'].includes(slot.kind)?[]:facts.map(([name,fact])=>`${name}: ${fact}`).slice(0,3),visual:'',table:null,notes:'Teacher review is required. Test fixture, not a live AI response.',questions:slot.quizNumbers.map(number=>({number,question:`Which tool ${facts[number-1][1].charAt(0).toLowerCase()+facts[number-1][1].slice(1,-1)}?`,choices:{A:facts[number-1][0],B:facts[number%5][0],C:facts[(number+1)%5][0],D:facts[(number+2)%5][0]},correctAnswer:'A',rationale:facts[number-1][1]}))}))};}
+const situation={setting:'A small beauty salon in the barangay',story:"Lea helps at her aunt's salon after class. A customer asks for a quick manicure, but the nail file, buffer and clipper were left mixed together in one drawer. Lea must choose the right tools and prepare them safely.",questions:['Which tool should Lea use to shape the free edge?','How should she prepare the tools before the service?']};
+function response(slots){return {slides:slots.map(slot=>({number:slot.number,title:slot.kind==='quiz'?'Check your understanding':`Lesson ${slot.number}: ${slot.kind}`,...(slot.kind==='situation'?{scenario:situation}:{}),bullets:['quiz','title','competency','divider','answer-key','situation'].includes(slot.kind)?[]:facts.map(([name,fact])=>`${name}: ${fact}`).slice(0,3),visual:'',table:null,notes:'Teacher review is required. Test fixture, not a live AI response.',questions:slot.quizNumbers.map(number=>({number,question:`Which tool ${facts[number-1][1].charAt(0).toLowerCase()+facts[number-1][1].slice(1,-1)}?`,choices:{A:facts[number-1][0],B:facts[number%5][0],C:facts[(number+1)%5][0],D:facts[(number+2)%5][0]},correctAnswer:'A',rationale:facts[number-1][1]}))}))};}
 async function main(){
   const longTitle='A lesson about '+ 'important curriculum concepts '.repeat(12);
   assert.ok(g.concisePowerPointTitle(longTitle).length<=110);
@@ -30,6 +33,9 @@ async function main(){
     const input=fixture(count,organization);const before=JSON.stringify(input); const slots=g.slidePlan(input);
     assert.equal(slots.length,count);assert.equal(slots.filter(s=>s.kind==='divider').length,organization==='four-day'?4:0);
     assert.deepEqual(slots.flatMap(s=>s.quizNumbers),[1,2,3,4,5]);
+    assert.equal(slots.filter(s=>s.kind==='situation').length,1,'Every deck plans exactly one real-life situation slot.');
+    assert.ok(slots.find(s=>s.kind==='situation').focus.includes('REAL-LIFE SITUATION'));
+    assert.ok(g.buildPowerPointPrompt(input).includes('"scenario":{'));
     let calls=0;const deck=await g.generatePowerPoint(input,undefined,async payload=>{calls++;assert.ok(payload.slots.length<=5);return response(payload.slots);});
     assert.equal(deck.slides.length,count); assert.equal(calls,Math.ceil(count/5)); assert.equal(JSON.stringify(input),before);
     assert.deepEqual(g.displayBullets(deck,deck.slides.at(-1)),['1. A','2. A','3. A','4. A','5. A']);
@@ -37,6 +43,8 @@ async function main(){
     assert.equal(g.importPowerPointResponse(input,'```json\n'+JSON.stringify(envelope)+'\n```').slides.length,count);
     assert.throws(()=>g.importPowerPointResponse({...input,week:input.week+1},JSON.stringify(envelope)),/different lesson/);
     assert.throws(()=>g.importPowerPointResponse(input,JSON.stringify({...envelope,slides:envelope.slides.slice(1)})),/exactly/);
+    const missingStory=structuredClone(envelope);delete missingStory.slides.find(s=>s.scenario).scenario;assert.throws(()=>g.importPowerPointResponse(input,JSON.stringify(missingStory)),/real-life situation/);
+    assert.deepEqual(deck.slides.find(s=>s.kind==='situation').scenario,situation);assert.ok(deck.slides.filter(s=>s.kind!=='situation').every(s=>s.scenario===null));
   }
   // Real curriculum combinations, including the user's Grade 9 GMRC Term 2 selection.
   for(const grade of [7,8,9,10]){
@@ -54,6 +62,21 @@ async function main(){
   const wrong=structuredClone(deck);wrong.slides[1].bullets=['Changed official wording'];assert.throws(()=>g.assertPowerPointReady(wrong),/Official/);
   const key=structuredClone(deck);key.slides.find(s=>s.kind==='quiz').questions[0].correctAnswer='B';assert.equal(g.displayBullets(key,key.slides.at(-1))[0],'1. B');
   const missing=structuredClone(deck);missing.slides=missing.slides.filter(s=>s.kind!=='quiz');assert.throws(()=>g.assertPowerPointReady(missing),/five quiz/);
+  // Review gate: approval records one exact version; any content edit requires a new review.
+  const all=review.reviewConfirmations.map(item=>item.id);
+  assert.equal(review.reviewState(deck),'pending');assert.throws(()=>review.assertPowerPointReviewed(deck),/Review and approve/);
+  assert.throws(()=>review.approvePowerPoint(deck,all,deck.slides.length-1),/View every slide/);
+  assert.throws(()=>review.approvePowerPoint(deck,['content'],deck.slides.length),/confirmation/);
+  const approved=review.approvePowerPoint(deck,all,deck.slides.length);assert.equal(review.reviewState(approved),'approved');review.assertPowerPointReviewed(approved);
+  assert.equal(review.reviewState({...approved,updatedAt:'2030-01-01T00:00:00.000Z'}),'approved','Saving again must not invalidate the review.');
+  const changed=structuredClone(approved);changed.slides.find(s=>s.kind==='situation').scenario.story+=' She asks for help.';assert.equal(review.reviewState(changed),'changed');assert.throws(()=>review.assertPowerPointReviewed(changed),/changed after/);
+  const noSituation=structuredClone(deck);noSituation.slides=noSituation.slides.filter(s=>s.kind!=='situation');assert.equal(review.powerPointChecks(noSituation).find(c=>c.id==='situation').status,'fail');assert.throws(()=>review.approvePowerPoint(noSituation,all,noSituation.slides.length),/real-life situation/);
+  const blank=structuredClone(deck);blank.slides.splice(5,0,review.blankSituationSlide(1));assert.throws(()=>g.assertPowerPointReady(blank),/real-life situation/);assert.equal(review.powerPointChecks(blank).find(c=>c.id==='situation').status,'fail');
+  assert.equal(review.powerPointChecks(deck).filter(c=>c.status==='fail').length,0);
+  // Situation text is sized to fit its boxes: normal stories keep full size, maximum-length ones shrink.
+  assert.deepEqual(layout.situationFontSizes(situation,true),{setting:15,story:19,questions:16});
+  const longest={setting:'Barangay '.repeat(9).slice(0,80),story:'market '.repeat(69).slice(0,480),questions:Array(3).fill('question '.repeat(16).slice(0,140))};
+  const small=layout.situationFontSizes(longest,true);assert.ok(small.story<19&&small.story>=12&&small.questions<16&&small.questions>=11,'Long situation text must shrink to fit.');
   const extra=structuredClone(deck);extra.slides[4].bullets=Array(7).fill('Too many bullets');assert.throws(()=>g.assertPowerPointReady(extra),/six short/);
   const storageMap=new Map([['ilaw.lessonPlans.v1','existing lessons'],['ilaw.assessments.v1','existing tests']]);
   global.window={localStorage:{getItem:key=>storageMap.get(key)||null,setItem:(key,value)=>storageMap.set(key,value)}};
@@ -77,12 +100,12 @@ async function main(){
   for(const match of contentTypes.matchAll(/PartName="\/([^\"]+)"/g)) assert.ok(zip.file(match[1]),`Declared package part must exist: ${match[1]}`);
   const slides=Object.keys(zip.files).filter(name=>/^ppt\/slides\/slide\d+\.xml$/.test(name));assert.equal(slides.length,20);
   const xmls=await Promise.all(slides.map(name=>zip.file(name).async('string')));assert.ok(xmls.some(xml=>xml.includes('<a:tbl>')));assert.ok(xmls.every(xml=>xml.includes('<a:t>')));assert.ok(!xmls.some(xml=>xml.includes('<p:pic>')));
-  assert.ok(xmls.some(xml=>xml.includes('Insert labeled images')));assert.ok(xmls.some(xml=>xml.includes('1. A')));
+  assert.ok(xmls.some(xml=>xml.includes('Insert labeled images')));assert.ok(xmls.some(xml=>xml.includes('REAL-LIFE SITUATION') && xml.includes('Lea helps at her aunt') && xml.includes('Think &amp; discuss')),'The situation slide is exported as native editable text.');assert.ok(xmls.some(xml=>xml.includes('1. A')));
   const notes=await zip.file('ppt/notesSlides/notesSlide20.xml').async('string');assert.ok(notes.includes('Teacher review'));
   const safe=structuredClone(deck);safe.slides[4].title='<script>alert(1)</script>';const html=e.powerPointPrintHtml(safe);assert.ok(html.includes('&lt;script&gt;'));assert.ok(!html.includes('<script>'));
-  assert.equal((html.match(/<section class="slide">/g)||[]).length,20);
+  assert.equal((html.match(/<section class="slide">/g)||[]).length,20);assert.ok(html.includes('REAL-LIFE SITUATION') && html.includes('Think &amp; discuss'));
   assert.ok(!/[<>:"/\\|?*]/.test(e.powerPointFilename(deck)));
   const qa=path.join(root,'.powerpoint-qa');fs.mkdirSync(qa,{recursive:true});fs.writeFileSync(path.join(qa,'weekly-tools.pptx'),output);
-  console.log('PASS: slide counts, curriculum, lesson integration, strict JSON import, single-slide regeneration, quiz/key sync, storage, editable PPTX and safe print HTML. AI transport was mocked; provider factual quality is not proven by these tests.');
+  console.log('PASS: slide counts, real-life situation slot, curriculum, lesson integration, strict JSON import, single-slide regeneration, teacher review gate, quiz/key sync, storage, editable PPTX and safe print HTML. AI transport was mocked; provider factual quality is not proven by these tests.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});
