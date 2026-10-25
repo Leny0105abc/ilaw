@@ -25,7 +25,7 @@ export function AssessmentPrompt({ assessment, open, onOpenChange, onImport }: {
     try {
       const next = importAssessmentResponse(assessment, response);
       if (assessment.questions.length && !confirm("Replace the current test with these imported questions? Your TOS will stay unchanged.")) return;
-      onImport(next); setResponse(""); setMessage("Questions imported. Check each question and its answer, then confirm teacher content review before saving or exporting.");
+      onImport(next); setResponse(""); setMessage("Questions imported. You can save and export now.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Import failed. Your current test was retained."); }
   }
 
@@ -34,6 +34,6 @@ export function AssessmentPrompt({ assessment, open, onOpenChange, onImport }: {
     <p className="prompt-privacy">The prompt contains curriculum and test settings only, not your teacher profile, passwords, or student names. ILAW sends nothing to an AI service in this mode; you choose what to paste.</p>
     {prepared.error && <p className="form-error" role="alert">{prepared.error}</p>}
     {message && <p className="prompt-message" role="status" aria-live="polite">{message}</p>}
-    {open && <div className="prompt-workflow"><label>1. Copy this prompt into Gemini or Copilot<textarea ref={promptRef} value={prepared.text} readOnly rows={10} spellCheck={false}/></label><label>2. Paste the complete AI response<textarea value={response} onChange={event => setResponse(event.target.value)} rows={8} spellCheck={false} placeholder={'Paste the complete JSON response, starting with {"version": 1, "requestId": ...'}/></label><div className="prompt-import-actions"><button type="button" className="primary-btn" disabled={!prepared.text || !response.trim()} onClick={importResponse}><FileInput/>Import questions</button><span>3. Review and edit the test, confirm teacher review, then export or save.</span></div></div>}
+    {open && <div className="prompt-workflow"><label>1. Copy this prompt into Gemini or Copilot<textarea ref={promptRef} value={prepared.text} readOnly rows={10} spellCheck={false}/></label><label>2. Paste the complete AI response<textarea value={response} onChange={event => setResponse(event.target.value)} rows={8} spellCheck={false} placeholder={'Paste the complete JSON response, starting with {"version": 1, "requestId": ...'}/></label><div className="prompt-import-actions"><button type="button" className="primary-btn" disabled={!prepared.text || !response.trim()} onClick={importResponse}><FileInput/>Import questions</button><span>3. Edit anything you want, then save or export.</span></div></div>}
   </section>;
 }

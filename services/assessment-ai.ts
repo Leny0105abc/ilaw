@@ -61,7 +61,7 @@ export async function generateTestQuestions(assessment: Assessment, onProgress?:
     const issues = [...questionIssues(questions), ...await reviewQuestions(draft, request, onProgress, signal)];
     if (!issues.length) {
       const next = { ...draft, questions: shuffleAnswerPositions(questions) };
-      const structural = testIssues(next, false);
+      const structural = testIssues(next);
       if (structural.length) throw new Error(structural.map(issue => issue.message).join(" "));
       return { ...next, testReview: { fingerprint: testFingerprint(next), reviewedAt: new Date().toISOString(), reviewer: "ai" }, updatedAt: new Date().toISOString() };
     }

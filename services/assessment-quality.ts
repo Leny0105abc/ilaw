@@ -80,7 +80,8 @@ export function testFingerprint(assessment: Assessment) {
   return `${data.length}-${first >>> 0}-${second >>> 0}`;
 }
 
-export function testIssues(assessment: Assessment, requireReview = true): QualityIssue[] {
+// Structural checks only. A separate teacher-review confirmation is no longer required to save or export.
+export function testIssues(assessment: Assessment): QualityIssue[] {
   const issues = questionIssues(assessment.questions);
   const error = difficultyError(assessment.difficulty || defaultDifficulty);
   if (error) issues.push({ message: error });
@@ -102,7 +103,6 @@ export function testIssues(assessment: Assessment, requireReview = true): Qualit
   if (Math.max(...counts) - Math.min(...counts) > 1) issues.push({ message: "Shuffle answer positions for a reasonably balanced answer key." });
   const key = assessment.questions.map(item => item.correctAnswer).join("");
   if (/(A{3}|B{3}|C{3}|D{3})/.test(key) || /(.{4})\1\1/.test(key)) issues.push({ message: "Shuffle answer positions to remove repeated answer-key patterns." });
-  if (requireReview && assessment.testReview?.fingerprint !== testFingerprint(assessment)) issues.push({ message: "Review factual accuracy, grammar, plausible distractors, difficulty, and the single best answer before saving or exporting." });
   return issues;
 }
 

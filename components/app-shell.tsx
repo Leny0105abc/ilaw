@@ -60,7 +60,6 @@ export function AppShell() {
   const [activePowerPoint, setActivePowerPoint] = useState<WeeklyPowerPoint|null>(null);
   const [powerpointSeed, setPowerpointSeed] = useState<LessonPlan|null>(null);
   const [powerpointCreateKey, setPowerpointCreateKey] = useState(0);
-  const [powerpointMode, setPowerpointMode] = useState<"edit"|"review">("edit");
   const [cotLessons,setCotLessons]=useState<CotLesson[]>([]);
   const [activeCot,setActiveCot]=useState<CotLesson|null>(null);
   const [cotSeed,setCotSeed]=useState<LessonPlan|null>(null);
@@ -119,8 +118,8 @@ export function AppShell() {
   function createPowerPoint(seed:LessonPlan|null=null) {setActivePowerPoint(null);setPowerpointSeed(seed);setPowerpointCreateKey(value=>value+1);setView("powerpoint-create");}
   function persistPowerPoints(next:WeeklyPowerPoint[]) {savePowerPoints(next);setPowerpoints(next);}
   function savePowerPoint(p:WeeklyPowerPoint) {persistPowerPoints([p,...powerpoints.filter(item=>item.id!==p.id)]);setActivePowerPoint(p);}
-  function openPowerPoint(p:WeeklyPowerPoint,mode:"edit"|"review"="edit") {setActivePowerPoint(p);setPowerpointMode(mode);setView("powerpoint-editor");}
-  function duplicatePowerPoint(p:WeeklyPowerPoint) {const now=new Date().toISOString();const copy={...structuredClone(p),id:crypto.randomUUID(),title:`${p.title} (Copy)`.slice(0,110),createdAt:now,updatedAt:now,review:null};savePowerPoint(copy);openPowerPoint(copy);}
+  function openPowerPoint(p:WeeklyPowerPoint) {setActivePowerPoint(p);setView("powerpoint-editor");}
+  function duplicatePowerPoint(p:WeeklyPowerPoint) {const now=new Date().toISOString();const copy={...structuredClone(p),id:crypto.randomUUID(),title:`${p.title} (Copy)`.slice(0,110),createdAt:now,updatedAt:now};savePowerPoint(copy);openPowerPoint(copy);}
   function createCot(plan:LessonPlan|null=null){setActiveCot(null);setCotSeed(plan);setCotCreateKey(n=>n+1);setView("cot-create");}
   function persistCot(next:CotLesson[]){saveCotLessons(next);setCotLessons(next);}
   function saveCot(p:CotLesson){persistCot([p,...cotLessons.filter(c=>c.id!==p.id)]);setActiveCot(p);}
@@ -162,8 +161,8 @@ export function AppShell() {
       {view === "assessments" && <AssessmentLibrary assessments={assessments} onCreate={() => createAssessment()} onOpen={openAssessment} onDuplicate={duplicateAssessment} onDelete={(id) => persistAssessments(assessments.filter((item) => item.id !== id))} />}
       {view === "assessment-editor" && activeAssessment && <AssessmentBuilder initial={activeAssessment} onSave={saveAssessment} onBack={() => navigate("assessments")} />}
       {view === "powerpoint-create" && <PowerPointBuilder key={powerpointCreateKey} plans={plans} seed={powerpointSeed} onSave={savePowerPoint} onBack={()=>navigate("powerpoints")}/>}
-      {view === "powerpoints" && <PowerPointLibrary presentations={powerpoints} onCreate={()=>createPowerPoint()} onOpen={p=>openPowerPoint(p)} onReview={p=>openPowerPoint(p,"review")} onDuplicate={duplicatePowerPoint} onDelete={id=>persistPowerPoints(powerpoints.filter(p=>p.id!==id))}/>}
-      {view === "powerpoint-editor" && activePowerPoint && <PowerPointBuilder key={activePowerPoint.id} plans={plans} initial={activePowerPoint} initialMode={powerpointMode} onSave={savePowerPoint} onBack={()=>navigate("powerpoints")}/>}
+      {view === "powerpoints" && <PowerPointLibrary presentations={powerpoints} onCreate={()=>createPowerPoint()} onOpen={openPowerPoint} onDuplicate={duplicatePowerPoint} onDelete={id=>persistPowerPoints(powerpoints.filter(p=>p.id!==id))}/>}
+      {view === "powerpoint-editor" && activePowerPoint && <PowerPointBuilder key={activePowerPoint.id} plans={plans} initial={activePowerPoint} onSave={savePowerPoint} onBack={()=>navigate("powerpoints")}/>}
       {view === "cot-create" && <CotBuilder key={cotCreateKey} plans={plans} seed={cotSeed} library={cotLibrary} libraryError={cotLibraryError} onReload={refreshCotLibrary} onManage={()=>navigate("cot-indicators")} onSave={saveCot} onBack={()=>navigate("cot-lessons")}/>}
       {view === "cot-editor" && activeCot && <CotBuilder key={activeCot.id} plans={plans} initial={activeCot} library={cotLibrary} libraryError={cotLibraryError} onReload={refreshCotLibrary} onManage={()=>navigate("cot-indicators")} onSave={saveCot} onBack={()=>navigate("cot-lessons")}/>}
       {view === "cot-lessons" && <CotLibrary lessons={cotLessons} onCreate={()=>createCot()} onOpen={openCot} onDuplicate={duplicateCot} onDelete={id=>persistCot(cotLessons.filter(p=>p.id!==id))}/>}

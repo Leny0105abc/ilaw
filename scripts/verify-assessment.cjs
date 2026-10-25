@@ -64,8 +64,8 @@ async function verify() {
   assert.equal(JSON.stringify(imported.tos),JSON.stringify(input.tos));
   assert.equal(JSON.stringify(input),original);
   imported.questions.forEach(item=>{assert.equal(item.competency,input.competencies[0].text);assert.equal(item.choices[item.correctAnswer],data(item.number).choices.A);});
-  assert.equal(quality.testIssues(imported,false).length,0);
-  assert.throws(()=>quality.assertTestReady(imported),/Review factual/);
+  assert.equal(quality.testIssues(imported).length,0);
+  quality.assertTestReady(imported); // No separate teacher-review confirmation is required.
   const approved={...imported,testReview:{fingerprint:quality.testFingerprint(imported),reviewedAt:new Date().toISOString(),reviewer:'teacher'}};
   assert.equal(quality.testIssues(approved).length,0);
   assert.throws(()=>importAssessmentResponse(input,JSON.stringify({...external,items:external.items.slice(1)})),/exactly 8/);
@@ -79,7 +79,7 @@ async function verify() {
   assert.throws(()=>importAssessmentResponse(input,JSON.stringify({...external,items:external.items.map((item,index)=>index===1?{...item,question:external.items[0].question}:item)})),/too similar/);
   const edited={...generated,questions:generated.questions.map((item,index)=>index===0?{...item,question:'Which implement can shape a natural nail edge?'}:item)};
   assert.notEqual(quality.testFingerprint(edited),generated.testReview.fingerprint);
-  assert.ok(quality.testIssues(edited).some(issue=>issue.message.includes('Review factual')));
+  assert.ok(!quality.testIssues(edited).some(issue=>issue.message.includes('Review factual')),'Edits no longer require a separate review.');
   const filler={...generated.questions[0],choices:{...generated.questions[0].choices,A:'A response that is accurate and appropriate.'}};
   assert.ok(quality.questionIssues([filler]).some(issue=>issue.message.includes('filler')));
   assert.ok(quality.questionIssues([generated.questions[0],{...generated.questions[0],number:2}]).some(issue=>issue.message.includes('similar')));
@@ -97,6 +97,6 @@ async function verify() {
   assert.ok(word.length>1000); assert.ok(pdf.getNumberOfPages()>=1);
   const out=process.env.ASSESSMENT_VERIFY_OUTPUT;
   if(out){fs.mkdirSync(out,{recursive:true});fs.writeFileSync(path.join(out,'test.docx'),word);fs.writeFileSync(path.join(out,'test.pdf'),Buffer.from(pdf.output('arraybuffer')));fs.writeFileSync(path.join(out,'test.html'),html);}
-  console.log('PASS: copy-prompt context/privacy/language, external JSON import and rejection guards, mandatory teacher review, difficulty totals, immutable TOS, answer shuffling, mock generation/review/repair, single-item regeneration, edit invalidation, filler/duplicate guards, editable Word and printable PDF. Live provider quality still requires configuration.');
+  console.log('PASS: copy-prompt context/privacy/language, external JSON import and rejection guards, save/export without a separate review step, difficulty totals, immutable TOS, answer shuffling, mock generation/review/repair, single-item regeneration, edit invalidation, filler/duplicate guards, editable Word and printable PDF. Live provider quality still requires configuration.');
 }
 verify().catch(error=>{console.error(error);process.exit(1);});

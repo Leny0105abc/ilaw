@@ -66,7 +66,7 @@ export function importAssessmentResponse(assessment: Assessment, pasted: string)
     return { ...item, ...slot, id: crypto.randomUUID(), revision: 0 };
   });
   const next: Assessment = { ...assessment, questions: shuffleAnswerPositions(questions), testReview: undefined, updatedAt: new Date().toISOString() };
-  const issues = testIssues(next, false);
+  const issues = testIssues(next);
   if (issues.length) throw new Error(`Correct the AI response before importing. ${issues.slice(0, 4).map(issue => `${issue.number ? `Item ${issue.number}: ` : ""}${issue.message}`).join(" ")} Your existing test is unchanged.`);
   // External AI self-review is not trusted as approval. Teacher review explicitly
   // unlocks saving/exporting through the existing content-fingerprint guard.

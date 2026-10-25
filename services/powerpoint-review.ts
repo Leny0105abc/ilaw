@@ -1,28 +1,8 @@
 import { WeeklyPowerPoint } from "@/types/powerpoint";
-import { assertPowerPointReady, digest, quizItems } from "@/services/powerpoint-generator";
+import { assertPowerPointReady, quizItems } from "@/services/powerpoint-generator";
 
 export type ReviewStatus = "pass" | "warn" | "fail";
 export type ReviewCheck = { id: string; status: ReviewStatus; label: string; detail: string; slideIndex?: number };
-
-// What the teacher confirms before the deck can be downloaded.
-export const reviewConfirmations = [
-  { id: "content", label: "I read every slide and checked the lesson content for accuracy." },
-  { id: "situation", label: "The real-life situation fits my learners and our community." },
-  { id: "quiz", label: "I checked the quiz questions and the answer key." },
-] as const;
-
-// Covers everything that ends up in the downloaded file. Saving, renaming the
-// library entry's timestamps or re-opening the deck does not invalidate a review.
-export function powerPointFingerprint(p: WeeklyPowerPoint) {
-  return `pptr-${digest(JSON.stringify([p.grade, p.subject, p.term, p.week, p.title, p.competencies, p.sourceLesson?.references || "", p.slides]))}`;
-}
-export function isPowerPointReviewed(p: WeeklyPowerPoint) {
-  return !!p.review && p.review.fingerprint === powerPointFingerprint(p);
-}
-export function reviewState(p: WeeklyPowerPoint): "approved" | "changed" | "pending" {
-  if (isPowerPointReviewed(p)) return "approved";
-  return p.review ? "changed" : "pending";
-}
 
 const lessonKinds = new Set(["objectives", "review", "motivation", "content", "application", "situation", "activity", "summary"]);
 function slideList(indexes: number[]) { return indexes.map(index => index + 1).join(", "); }
@@ -57,17 +37,11 @@ export function powerPointChecks(p: WeeklyPowerPoint): ReviewCheck[] {
   return checks;
 }
 
-export function approvePowerPoint(p: WeeklyPowerPoint, confirmations: string[], viewedSlides: number): WeeklyPowerPoint {
-  const blocking = powerPointChecks(p).filter(check => check.status === "fail");
-  if (blocking.length) throw new Error(blocking.map(check => check.detail).join("\n"));
-  if (viewedSlides < p.slides.length) throw new Error(`View every slide before approving (${viewedSlides} of ${p.slides.length} viewed).`);
-  const missing = reviewConfirmations.filter(item => !confirmations.includes(item.id));
-  if (missing.length) throw new Error("Tick every review confirmation before approving.");
-  return { ...p, review: { fingerprint: powerPointFingerprint(p), reviewedAt: new Date().toISOString(), confirmations: reviewConfirmations.map(item => item.id) } };
-}
-
-export function assertPowerPointReviewed(p: WeeklyPowerPoint) {
-  if (!isPowerPointReviewed(p)) throw new Error(p.review ? "This presentation changed after it was approved. Review it again before downloading." : "Review and approve the presentation before downloading.");
+// Downloads and printing are blocked only by real problems (a failed automatic check),
+// such as a missing real-life situation. Warnings never block.
+export function assertPowerPointExportable(p: WeeklyPowerPoint) {
+  const failed = powerPointChecks(p).filter(check => check.status === "fail");
+  if (failed.length) throw new Error(failed.map(check => check.detail).join("\n"));
 }
 
 // A blank situation the teacher (or "Regenerate slide") fills in.

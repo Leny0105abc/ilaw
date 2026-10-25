@@ -62,17 +62,17 @@ async function main(){
   const wrong=structuredClone(deck);wrong.slides[1].bullets=['Changed official wording'];assert.throws(()=>g.assertPowerPointReady(wrong),/Official/);
   const key=structuredClone(deck);key.slides.find(s=>s.kind==='quiz').questions[0].correctAnswer='B';assert.equal(g.displayBullets(key,key.slides.at(-1))[0],'1. B');
   const missing=structuredClone(deck);missing.slides=missing.slides.filter(s=>s.kind!=='quiz');assert.throws(()=>g.assertPowerPointReady(missing),/five quiz/);
-  // Review gate: approval records one exact version; any content edit requires a new review.
-  const all=review.reviewConfirmations.map(item=>item.id);
-  assert.equal(review.reviewState(deck),'pending');assert.throws(()=>review.assertPowerPointReviewed(deck),/Review and approve/);
-  assert.throws(()=>review.approvePowerPoint(deck,all,deck.slides.length-1),/View every slide/);
-  assert.throws(()=>review.approvePowerPoint(deck,['content'],deck.slides.length),/confirmation/);
-  const approved=review.approvePowerPoint(deck,all,deck.slides.length);assert.equal(review.reviewState(approved),'approved');review.assertPowerPointReviewed(approved);
-  assert.equal(review.reviewState({...approved,updatedAt:'2030-01-01T00:00:00.000Z'}),'approved','Saving again must not invalidate the review.');
-  const changed=structuredClone(approved);changed.slides.find(s=>s.kind==='situation').scenario.story+=' She asks for help.';assert.equal(review.reviewState(changed),'changed');assert.throws(()=>review.assertPowerPointReviewed(changed),/changed after/);
-  const noSituation=structuredClone(deck);noSituation.slides=noSituation.slides.filter(s=>s.kind!=='situation');assert.equal(review.powerPointChecks(noSituation).find(c=>c.id==='situation').status,'fail');assert.throws(()=>review.approvePowerPoint(noSituation,all,noSituation.slides.length),/real-life situation/);
+  // No approval step: a complete deck downloads directly. Failed checks (e.g. no real-life situation) still block.
+  review.assertPowerPointExportable(deck);assert.equal(review.powerPointChecks(deck).filter(c=>c.status==='fail').length,0);
+  const noSituation=structuredClone(deck);noSituation.slides=noSituation.slides.filter(s=>s.kind!=='situation');assert.equal(review.powerPointChecks(noSituation).find(c=>c.id==='situation').status,'fail');assert.throws(()=>review.assertPowerPointExportable(noSituation),/real-life situation/);
   const blank=structuredClone(deck);blank.slides.splice(5,0,review.blankSituationSlide(1));assert.throws(()=>g.assertPowerPointReady(blank),/real-life situation/);assert.equal(review.powerPointChecks(blank).find(c=>c.id==='situation').status,'fail');
-  assert.equal(review.powerPointChecks(deck).filter(c=>c.status==='fail').length,0);
+  // Import repairs common AI layout slips instead of rejecting the whole deck; nothing is lost.
+  const slipSlots=g.slidePlan(input);const slip=response(slipSlots);
+  const tooMany=slip.slides.find(s=>slipSlots[s.number-1].kind==='content');tooMany.bullets=['One','Two','Three','Four','Five','Six','Seven'];tooMany.visual='Insert a photo of a nail kit';
+  const quizSlip=slip.slides.find(s=>s.questions.length);quizSlip.bullets=['Stray bullet'];
+  const repaired=g.importPowerPointResponse(input,JSON.stringify({version:1,requestId:g.powerPointRequestId(input),...slip}));
+  const fixed=repaired.slides[tooMany.number-1];assert.equal(fixed.bullets.length,6);assert.equal(fixed.visual,'');assert.ok(fixed.notes.includes('Seven')&&fixed.notes.includes('Picture idea: Insert a photo of a nail kit'));
+  assert.equal(repaired.slides[quizSlip.number-1].bullets.length,0);assert.ok(repaired.slides[quizSlip.number-1].notes.includes('Stray bullet'));
   // Situation text is sized to fit its boxes: normal stories keep full size, maximum-length ones shrink.
   assert.deepEqual(layout.situationFontSizes(situation,true),{setting:15,story:19,questions:16});
   const longest={setting:'Barangay '.repeat(9).slice(0,80),story:'market '.repeat(69).slice(0,480),questions:Array(3).fill('question '.repeat(16).slice(0,140))};
@@ -106,6 +106,6 @@ async function main(){
   assert.equal((html.match(/<section class="slide">/g)||[]).length,20);assert.ok(html.includes('REAL-LIFE SITUATION') && html.includes('Think &amp; discuss'));
   assert.ok(!/[<>:"/\\|?*]/.test(e.powerPointFilename(deck)));
   const qa=path.join(root,'.powerpoint-qa');fs.mkdirSync(qa,{recursive:true});fs.writeFileSync(path.join(qa,'weekly-tools.pptx'),output);
-  console.log('PASS: slide counts, real-life situation slot, curriculum, lesson integration, strict JSON import, single-slide regeneration, teacher review gate, quiz/key sync, storage, editable PPTX and safe print HTML. AI transport was mocked; provider factual quality is not proven by these tests.');
+  console.log('PASS: slide counts, real-life situation slot, curriculum, lesson integration, strict JSON import, single-slide regeneration, layout repair on import, export checks, quiz/key sync, storage, editable PPTX and safe print HTML. AI transport was mocked; provider factual quality is not proven by these tests.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

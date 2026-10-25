@@ -1,7 +1,7 @@
 import { WeeklyPowerPoint } from "@/types/powerpoint";
 import { learningAreaLabel, termLabel } from "@/data/curriculum";
 import { assertPowerPointReady, displayBullets, quizItems } from "@/services/powerpoint-generator";
-import { assertPowerPointReviewed } from "@/services/powerpoint-review";
+import { assertPowerPointExportable } from "@/services/powerpoint-review";
 import { SITUATION_LAYOUT, situationFontSizes } from "@/services/powerpoint-layout";
 
 export function powerPointFilename(p: WeeklyPowerPoint) {
@@ -75,9 +75,9 @@ export async function packEditablePowerPoint(pptx: Awaited<ReturnType<typeof bui
   archive.file("[Content_Types].xml", types);
   return new Uint8Array(await archive.generateAsync({ type: "uint8array", compression: "DEFLATE" }));
 }
-// Downloads and printing are only for a deck the teacher reviewed and approved in this exact version.
+// Downloads and printing are blocked only by failed automatic checks (e.g. no real-life situation).
 export async function downloadPowerPoint(p: WeeklyPowerPoint) {
-  assertPowerPointReviewed(p);
+  assertPowerPointExportable(p);
   const bytes = await buildPowerPointBytes(p);
   const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.presentationml.presentation" }));
   const link = document.createElement("a"); link.href = url; link.download = `${powerPointFilename(p)}.pptx`;
@@ -90,7 +90,7 @@ export function powerPointPrintHtml(p: WeeklyPowerPoint) {
   return `<!doctype html><html><head><meta charset="utf-8"><title>${escape(powerPointFilename(p))}</title><style>@page{size:A4 landscape;margin:10mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;color:#17233c}.slide{break-after:page;min-height:175mm;padding:8mm}.slide:last-child{break-after:auto}h1{font-size:28pt;line-height:1.15}li,p{font-size:18pt;line-height:1.35}li{margin:5mm 0}.quiz{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8mm}.quiz p{font-size:14pt;margin:3mm 0}.quiz b{font-size:15pt}.visual{border:1px dashed #8190a8;padding:8mm;font-size:16pt}.content-visual{display:grid;grid-template-columns:2fr 1fr;gap:8mm}table{border-collapse:collapse;width:100%;font-size:17pt}td,th{border:1px solid #c6d2e5;padding:5mm}th{background:#edf3ff}small{color:#536581;font-size:10pt}.label{display:block;color:#167c76;font-weight:bold;letter-spacing:.12em;font-size:11pt;margin-top:3mm}.situation{display:grid;grid-template-columns:5fr 3fr;gap:8mm}.story{background:#fff7e6;border:1px solid #f4b740;border-radius:4mm;padding:6mm}.story b{color:#8a5a00;font-size:13pt}.story p{font-size:16pt}.guide{background:#eef4ff;border:1px solid #c6d2e5;border-radius:4mm;padding:6mm}.guide b{color:#173f7b;font-size:15pt}.guide li{font-size:14pt;margin:3mm 0}</style></head><body>${p.slides.map((slide,index)=>`<section class="slide"><small>${escape(learningAreaLabel(p.grade,p.subject))}, ${escape(termLabel(p.term))}, Week ${p.week}, Slide ${index+1}/${p.slides.length}</small>${slide.kind==="situation"&&slide.scenario?'<span class="label">REAL-LIFE SITUATION</span>':''}<h1>${escape(slide.title)}</h1>${slide.kind==="situation"&&slide.scenario?`<div class="situation"><div><div class="story"><b>Setting: ${escape(slide.scenario.setting)}</b><p>${escape(slide.scenario.story)}</p></div>${slide.visual?`<div class="visual">[${escape(slide.visual)}]</div>`:''}</div><div class="guide"><b>Think &amp; discuss</b><ol>${slide.scenario.questions.map(text=>`<li>${escape(text)}</li>`).join('')}</ol></div></div>`:slide.questions.length?`<div class="quiz">${slide.questions.map(item=>`<div><b>${item.number}. ${escape(item.question)}</b>${(['A','B','C','D'] as const).map(letter=>`<p>${letter}. ${escape(item.choices[letter])}</p>`).join('')}</div>`).join('')}</div>`:slide.table?`<table><thead><tr>${slide.table.headers.map(text=>`<th>${escape(text)}</th>`).join('')}</tr></thead><tbody>${slide.table.rows.map(row=>`<tr>${row.map(text=>`<td>${escape(text)}</td>`).join('')}</tr>`).join('')}</tbody></table>`:`<div class="${slide.visual?'content-visual':''}"><ul>${displayBullets(p,slide).map(text=>`<li>${escape(text)}</li>`).join('')}</ul>${slide.visual?`<div class="visual">[${escape(slide.visual)}]</div>`:''}</div>`}</section>`).join('')}</body></html>`;
 }
 export function printPowerPoint(p: WeeklyPowerPoint) {
-  assertPowerPointReviewed(p);
+  assertPowerPointExportable(p);
   const html = powerPointPrintHtml(p); const popup = window.open("", "_blank");
   if (!popup) throw new Error("Allow pop-ups for ILAW to open the print / Save PDF view.");
   popup.document.open(); popup.document.write(html); popup.document.close(); popup.focus(); popup.print();
