@@ -37,6 +37,6 @@ export function CotPromptWorkflow({ prompt, response, busy, error, copyNotice, s
     </div>
     {error && <p className="weekly-error" role="alert">{error}</p>}
     <h3>Step 4 — Review, save and export</h3>
-    <p>After a successful import, review the five COT tabs and click <b>Save COT lesson</b>. Complete the teacher-review checks in <b>Review and export</b> before downloading classroom materials. If import reports an error, your current draft and pasted response stay available for correction.</p>
+    <p>After a successful import, review the five COT tabs and click <b>Save COT lesson</b>. Then scroll to <b>Review and export</b> at the bottom of this page to download the Word, PDF, PowerPoint or ZIP files. If import reports an error, your current draft and pasted response stay available for correction.</p>
   </section>;
 }

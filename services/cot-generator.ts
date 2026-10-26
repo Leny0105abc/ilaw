@@ -90,9 +90,60 @@ function normalizeWorksheetNotes(a: z.infer<typeof cotActivitySchema>) {
     if (labels.some(label => !label) || new Set(labels).size !== labels.length || answers.some((answer, n) => worksheetTaskLabel(answer) !== labels[n]) || extra.some(entry => worksheetTaskLabel(entry))) return a;
     return { ...a, worksheet: { ...sheet, teacherKey: answers, teacherNotes: [...sheet.teacherNotes, ...extra] } };
 }
+// AI chats often write the multiple-choice section in a slightly different shape. Normalize the
+// common variants before the strict checks instead of rejecting the whole COT answer.
+const MC_LETTERS = ["A", "B", "C", "D"] as const;
+type Raw = Record<string, unknown>;
+const isObject = (value: unknown): value is Raw => !!value && typeof value === "object" && !Array.isArray(value);
+const stripChoiceLabel = (value: string) => value.replace(/^\s*\(?[A-Da-d][).:]\s+/, "").trim();
+function normalizeChoices(raw: unknown): unknown {
+    if (Array.isArray(raw) && raw.length === 4 && raw.every(item => typeof item === "string"))
+        return Object.fromEntries(MC_LETTERS.map((letter, index) => [letter, stripChoiceLabel(raw[index])]));
+    if (!isObject(raw)) return raw;
+    const out: Record<string, string> = {};
+    for (const [key, value] of Object.entries(raw)) {
+        const letter = key.trim().replace(/[).:]$/, "").toUpperCase();
+        if (!(MC_LETTERS as readonly string[]).includes(letter) || typeof value !== "string") return raw;
+        out[letter] = stripChoiceLabel(value);
+    }
+    return MC_LETTERS.every(letter => letter in out) ? out : raw;
+}
+function normalizeAnswer(answer: unknown, choices: unknown): unknown {
+    if (typeof answer !== "string") return answer;
+    const value = answer.trim();
+    if (isObject(choices)) { const match = MC_LETTERS.find(letter => typeof choices[letter] === "string" && (choices[letter] as string).trim().toLowerCase() === value.toLowerCase()); if (match) return match; }
+    const letter = value.match(/^(?:(?:option|letter|answer)\s*:?\s*)?\(?([A-D])\)?(?:[.:)]\s*.*)?$/i);
+    return letter ? letter[1].toUpperCase() : answer;
+}
+const hasFourChoices = (item: Raw) => isObject(item.choices) && MC_LETTERS.every(letter => typeof (item.choices as Raw)[letter] === "string");
+export function normalizeCotResponse(raw: unknown, kind: CotLesson["assessmentKind"]): unknown {
+    if (kind !== "multiple-choice" || !isObject(raw) || !Array.isArray(raw.assessment) || !Array.isArray(raw.activities)) return raw;
+    const items = (raw.assessment as unknown[]).filter(isObject).map((item): Raw => {
+        const choices = normalizeChoices(item.choices);
+        const rubric = Array.isArray(item.rubric) ? item.rubric.filter(row => isObject(row) && typeof row.criterion === "string" && Number.isInteger(row.points) && (row.points as number) >= 1 && (row.points as number) <= 100).map(row => ({ criterion: (row as Raw).criterion, points: (row as Raw).points })) : item.rubric;
+        return { ...item, choices, answer: normalizeAnswer(item.answer, choices), rubric };
+    });
+    const mc = items.filter(hasFourChoices);
+    if (mc.length < 5) return { ...raw, assessment: items };
+    // Keep five multiple-choice items. Extra checks (e.g. a performance task with a rubric) become part of
+    // their linked activity's formative check, so the objectives they measure stay covered.
+    const keep = mc.slice(0, 5); const extras = items.filter(item => !keep.includes(item));
+    const activities = (raw.activities as unknown[]).map(activity => {
+        if (!isObject(activity) || !isObject(activity.formative)) return activity;
+        const linked = extras.filter(item => item.activityId === activity.id);
+        if (!linked.length) return activity;
+        const formative = activity.formative;
+        const indices = [...new Set([...(Array.isArray(formative.objectiveIndices) ? formative.objectiveIndices : []), ...linked.flatMap(item => Array.isArray(item.objectiveIndices) ? item.objectiveIndices : [])])];
+        const added = linked.map(item => `Additional check: ${String(item.question ?? "").trim()}${item.expectedEvidence ? ` Expected: ${String(item.expectedEvidence).trim()}` : ""}`).join(" ");
+        return { ...activity, formative: { ...formative, objectiveIndices: indices, expectedEvidence: `${String(formative.expectedEvidence ?? "").trim()} ${added}`.trim().slice(0, 4000) } };
+    });
+    const orphaned = extras.filter(item => !(raw.activities as unknown[]).some(activity => isObject(activity) && activity.id === item.activityId));
+    return { ...raw, activities, assessment: [...keep, ...orphaned] };
+}
+
 export function importCotResponse(p: CotLesson, text: string): CotLesson {
     assertCotSetup(p);
-    const result = cotResponseSchema.parse(parseResponse(text));
+    const result = cotResponseSchema.parse(normalizeCotResponse(parseResponse(text), p.assessmentKind));
     if (result.requestId !== cotRequestId(p))
         throw new Error("This response belongs to different COT settings. Generate a new prompt after changing the setup.");
     const slots = cotSlots(p);
@@ -133,11 +184,15 @@ export function validateCotContent(p: CotLesson) {
     p.alignments.forEach(a => { const { teacherReviewed: reviewed, ...content } = a; void reviewed; cotAlignmentSchema.parse(content); if (a.evidence.some(e => !activityIds.has(e.activityId)) || (a.suggestion && !activityIds.has(a.suggestion.activityId)))
         throw new Error("An alignment refers to an activity outside this observed lesson."); });
     p.assessment.forEach(item => { cotAssessmentSchema.parse(item); validateObjectives(item.objectiveIndices); if (!activityIds.has(item.activityId) || item.indicatorIds.some(id => !ids.has(id)))
-        throw new Error("Assessment references an unknown activity or indicator."); if (p.assessmentKind === "multiple-choice" && (!item.choices || !["A", "B", "C", "D"].includes(item.answer) || new Set(Object.values(item.choices).map(s => s.toLowerCase().trim())).size !== 4))
-        throw new Error("Each multiple-choice item needs four distinct choices and an A-D answer."); if (p.assessmentKind === "performance-task" && !item.rubric.length)
+        throw new Error("Assessment references an unknown activity or indicator."); if (p.assessmentKind === "multiple-choice") {
+            const label = `Assessment item "${item.id}"`;
+            if (!item.choices) throw new Error(`${label} has no A–D choices. Edit it in the Assessment tab, or ask the AI for exactly five multiple-choice items with choices A, B, C and D.`);
+            if (!["A", "B", "C", "D"].includes(item.answer)) throw new Error(`${label}: the answer "${item.answer.slice(0, 60)}" is not one of A, B, C or D.`);
+            if (new Set(Object.values(item.choices).map(s => s.toLowerCase().trim())).size !== 4) throw new Error(`${label} repeats an answer choice. Each of A, B, C and D must be different.`);
+        } if (p.assessmentKind === "performance-task" && !item.rubric.length)
         throw new Error("A performance task needs a scoring rubric."); });
     if (p.assessmentKind === "multiple-choice" && p.assessment.length !== 5)
-        throw new Error("Generate exactly five multiple-choice assessment items.");
+        throw new Error(`Generate exactly five multiple-choice assessment items (this COT has ${p.assessment.length}).`);
     if(p.assessmentKind==="multiple-choice"&&p.assessment.some(item=>item.question.length>160||Object.values(item.choices||{}).some(choice=>choice.length>157)))throw new Error("Keep MC questions at most 160 characters and choices at most 157 characters. No question text will be silently shortened.");
     if (!p.assessment.length || new Set(p.assessment.map(i => i.id)).size !== p.assessment.length)
         throw new Error("Provide assessment items with unique IDs.");
