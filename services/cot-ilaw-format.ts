@@ -82,13 +82,28 @@ export function ilawHeadingLines(p: CotLesson) {
   return new Set([...p.activities.map(activityHeading), ...p.selectedSessions.map(session => sessionDivider(p, session))]);
 }
 
+// The AI sometimes starts its own lines with "Teacher:" or "Learners:". Remove those repeats and
+// show the role label once at the start of the block ("Teacher says:" and similar are kept).
+const rolePatterns = {
+  teacher: { strip: /^\s*(?:the\s+)?(?:teacher|guro)\s*:\s*/i, starts: /^\s*(?:the\s+)?(?:teacher|guro)\b/i },
+  learners: { strip: /^\s*(?:(?:the\s+)?(?:learners?|students?|pupils?)|mga\s+mag-aaral)\s*:\s*/i, starts: /^\s*(?:(?:the\s+)?(?:learners?|students?|pupils?)|mga\s+mag-aaral)\b/i },
+} as const;
+export function roleText(label: string, role: keyof typeof rolePatterns, text: string) {
+  const { strip, starts } = rolePatterns[role];
+  const lines = text.split("\n").map(line => { let next = line; while (strip.test(next)) next = next.replace(strip, ""); return next; });
+  const first = lines.findIndex(line => line.trim());
+  if (first < 0) return `${label}:`;
+  if (!starts.test(lines[first])) lines[first] = `${label}: ${lines[first]}`;
+  return lines.join("\n");
+}
+
 function activityText(p: CotLesson, a: CotActivity) {
   const tagalog = isTagalogLearningArea(p.sourcePlan.area);
   const terms = tagalog ? { teacher: "Guro", learners: "Mga mag-aaral", question: "Gabay na tanong", responses: "Inaasahang tugon", followUp: "Kasunod na tanong", support: "Karagdagang gabay", core: "Pangunahing gawain", extension: "Karagdagang hamon", check: "Pagsusuri sa pagkatuto" } : { teacher: "Teacher", learners: "Learners", question: "Guide question", responses: "Anticipated responses", followUp: "Follow-up", support: "Support", core: "Core task", extension: "Extension", check: "Check for understanding" };
   return [
     activityHeading(a),
-    `${terms.teacher}: ${a.teacherActivity}`,
-    `${terms.learners}: ${a.learnerActivity}`,
+    roleText(terms.teacher, "teacher", a.teacherActivity),
+    roleText(terms.learners, "learners", a.learnerActivity),
     ...a.questions.map(q => `${terms.question}: ${q.question}\n${terms.responses}: ${q.responses.join("; ")}\n${terms.followUp}: ${q.followUp}`),
     ...(/activity-[56]$/.test(a.id) ? [`${terms.support}: ${a.differentiation.support}\n${terms.core}: ${a.differentiation.core}\n${terms.extension}: ${a.differentiation.extension}`] : []),
     `${terms.check}: ${a.formative.task}\n${a.formative.expectedEvidence}`,

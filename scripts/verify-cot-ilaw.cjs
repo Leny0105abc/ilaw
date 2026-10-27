@@ -33,6 +33,15 @@ async function main() {
   assert.ok(activities.includes(lesson.indicators[0].wording));
   assert.ok(activities.includes('ANNOTATION'));
   assert.ok(activities.includes('not a completed observation or rating'));
+  // AI text that repeats "Learners:" / "Teacher:" on every line shows each label once.
+  const repeated = structuredClone(lesson);
+  repeated.activities[0].learnerActivity = 'Learners: Participate in the prayer and attendance check.\nLearners: Prepare their learning materials and follow classroom agreements.';
+  repeated.activities[0].teacherActivity = 'Teacher: Teacher says: "Good morning, class."\nTeacher: Checks attendance.';
+  const repeatedRows = format.cotIlawRows(repeated), repeatedText = repeatedRows[12].content + '\n' + repeatedRows[13].content;
+  assert.ok(repeatedText.includes('Learners: Participate in the prayer and attendance check.\nPrepare their learning materials and follow classroom agreements.'));
+  assert.ok(repeatedText.includes('Teacher says: "Good morning, class."\nChecks attendance.'));
+  assert.ok(!/Learners: Learners|Teacher: Teacher/.test(repeatedText), 'No doubled role labels');
+  assert.equal(format.roleText('Learners', 'learners', 'Learners recall the steps.'), 'Learners recall the steps.');
   assert.equal((rows[17].content.match(/^[1-5]\. /gm) || []).length, 5);
   assert.ok(!rows[17].content.includes('Teacher answer'));
   assert.ok(!JSON.stringify(rows).includes('fish culture'), 'Do not copy irrelevant sample content');
