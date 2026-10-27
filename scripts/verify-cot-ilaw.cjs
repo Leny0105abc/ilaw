@@ -60,6 +60,11 @@ async function main() {
   assert.ok(!xml.includes('Application Software'));
   assert.equal(JSON.stringify(lesson), before, 'Export must not mutate saved lesson data');
   const pdf = await format.buildIlawCotPdf(lesson, seal);
+  // FORMAT_K reference: no observation/draft line under LESSON PLAN, underlined field labels, at most six pages.
+  assert.ok(!xml.includes('Planned evidence only') && !xml.includes('Observer: ') && !html.includes('Planned evidence only'), 'No observation/draft line under LESSON PLAN');
+  assert.ok(xml.includes('<w:u w:val="single"/>'), 'Field labels are underlined like FORMAT_K');
+  assert.ok(format.estimateIlawPages(lesson, format.ilawLayout(lesson)) <= format.ILAW_MAX_PAGES, 'Word lesson plan is sized for six pages');
+  assert.ok((Buffer.from(pdf).toString('latin1').match(/\/Type \/Page[^s]/g) || []).length <= format.ILAW_MAX_PAGES, 'PDF lesson plan fits six pages');
   if (process.argv.includes('--artifacts')) {
     const qa = path.join(__dirname, '../.cot-reference-qa');
     fs.mkdirSync(qa, { recursive: true });

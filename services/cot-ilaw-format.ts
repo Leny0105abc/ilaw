@@ -9,6 +9,57 @@ const widths = [2972, 13216];
 const margin = { top: 567, bottom: 284, left: 284, right: 284 };
 const esc = (text: string) => text.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
+// The lesson plan should fit on ILAW_MAX_PAGES pages. Text starts at FORMAT_K's normal 11pt and
+// steps down to 8pt only when a lesson is too long. Instruction text is 1pt smaller, as in the form.
+export const ILAW_MAX_PAGES = 6;
+const ILAW_SIZES = [11, 10.5, 10, 9.5, 9, 8.5, 8];
+export type IlawLayout = { body: number; guide: number };
+export const ilawLayoutFor = (body: number): IlawLayout => ({ body, guide: Math.max(7, body - 1) });
+const cellPad = { v: 30, h: 30 }; // twips; FORMAT_K uses very little cell padding
+const GAP_PT = 4; // space that replaces a blank line between paragraphs
+
+// Label styles copied from the teacher's COT ILAW FORMAT_K form.
+export function ilawLabelStyle(row: CotIlawRow, layout: IlawLayout) {
+  if (row.section) return { size: 16, bold: true, italic: false, underline: false, guideSize: layout.guide, guideItalic: false };
+  if (!row.guidance) return { size: layout.body, bold: true, italic: true, underline: false, guideSize: layout.guide, guideItalic: false };
+  const big = ["Pre-Lesson", "Flow"], medium = ["Learning Resources", "Opportunities for integration", "Extended learning opportunities"], small = ["Formative Assessment", "Reflections"];
+  const size = big.includes(row.label) ? 14 : medium.includes(row.label) ? 12 : small.includes(row.label) ? 11.5 : layout.body;
+  const guideItalic = ["Learning Competency", "Learning Objectives", "Learner Context", "Formative Assessment"].includes(row.label);
+  return { size, bold: false, italic: true, underline: true, guideSize: row.label === "Formative Assessment" ? Math.max(7, layout.guide - 1) : layout.guide, guideItalic };
+}
+
+// A blank line becomes a small gap before the next paragraph instead of a whole empty line.
+export function ilawParagraphs(text: string) {
+  const out: { text: string; gap: boolean }[] = []; let gap = false;
+  for (const line of text.split("\n")) { if (!line.trim()) { gap = out.length > 0; continue; } out.push({ text: line, gap }); gap = false; }
+  return out;
+}
+function wrappedLines(text: string, widthPt: number, sizePt: number, em: number) {
+  const perLine = Math.max(8, Math.floor(widthPt / (sizePt * em))); let lines = 1, length = 0;
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    if (length && length + 1 + word.length > perLine) { lines += 1 + Math.floor((word.length - 1) / perLine); length = word.length % perLine; }
+    else length += (length ? 1 : 0) + word.length;
+  }
+  return lines;
+}
+// Estimated Word page count (Bookman Old Style). Calibrated against Microsoft Word; slightly generous.
+export function estimateIlawPages(p: CotLesson, layout: IlawLayout) {
+  const em = .56, line = 1.2, pageHeight = (11906 - margin.top - margin.bottom) / 20;
+  const leftWidth = (widths[0] - 2 * cellPad.h) / 20, rightWidth = (widths[1] - 2 * cellPad.h) / 20;
+  const block = (text: string, width: number, size: number) => ilawParagraphs(text).reduce((sum, para) => sum + wrappedLines(para.text, width, size, em) * size * line + (para.gap ? GAP_PT : 0), 0);
+  let total = 68 + cotIlawHeader(p).length * 10 * line + 18 * line + 9 + 95; // seal, school header, title, signatures
+  for (const row of cotIlawRows(p)) {
+    const style = ilawLabelStyle(row, layout);
+    const left = block(row.label, leftWidth, style.size) + (row.guidance ? block(row.guidance, leftWidth, style.guideSize) : 0);
+    total += Math.max(left, block(row.content, rightWidth, layout.body)) + 2 * cellPad.v / 20;
+  }
+  return total / pageHeight;
+}
+export function ilawLayout(p: CotLesson): IlawLayout {
+  for (const size of ILAW_SIZES) { const layout = ilawLayoutFor(size); if (estimateIlawPages(p, layout) <= ILAW_MAX_PAGES - .1) return layout; }
+  return ilawLayoutFor(ILAW_SIZES[ILAW_SIZES.length - 1]);
+}
+
 function annotations(p: CotLesson, activity: CotActivity) {
   return p.alignments.flatMap(alignment => {
     const indicator = p.indicators.find(i => i.id === alignment.indicatorId);
@@ -70,9 +121,6 @@ export function cotIlawHeader(p: CotLesson) {
   const profile = p.sourcePlan.profile;
   return ["Republic of the Philippines", "DEPARTMENT OF EDUCATION", profile.region, profile.division, profile.district, profile.school, profile.location].filter(Boolean);
 }
-export function cotObservationLine(p: CotLesson) {
-  return `School Year ${p.schoolYear} · Observation ${p.observationDate || "____________"} ${p.observationTime || ""} · Observer: ${p.observer || "____________"} · Cycle: ${p.cycle} · ${p.status}. Planned evidence only; not an official COT rating.`;
-}
 async function sealData() {
   if (typeof window === "undefined") return null; // Offline tests may supply the existing seal explicitly.
   const result = await fetch("/deped-seal.png");
@@ -80,22 +128,23 @@ async function sealData() {
   return new Uint8Array(await result.arrayBuffer());
 }
 
-export async function buildIlawCotWord(p: CotLesson, seal: Uint8Array | null = null) {
+export async function buildIlawCotWord(p: CotLesson, seal: Uint8Array | null = null, layout: IlawLayout = ilawLayout(p)) {
   const { AlignmentType, BorderStyle, Document, ImageRun, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType, VerticalAlign } = await import("docx");
   const logo = seal || await sealData();
   const border = { style: BorderStyle.SINGLE, size: 4, color: "000000" }, none = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
-  const paragraph = (text: string, bold = false, center = false) => new Paragraph({ alignment: center ? AlignmentType.CENTER : AlignmentType.LEFT, keepNext: bold || !text.trim(), spacing: { after: 60, line: 240 }, children: [new TextRun({ text, bold, size: 20, font: "Bookman Old Style" })] });
-  const rows = cotIlawRows(p).map(row => new TableRow({ children: [
-    new TableCell({ width: { size: widths[0], type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: { top: 80, bottom: 80, left: 90, right: 90 }, children: [new Paragraph({ spacing: { after: 50 }, children: [new TextRun({ text: row.label + (row.guidance ? ":" : ""), bold: true, italics: !row.section, size: 20 })] }), ...(row.guidance ? row.guidance.split("\n").map(line => paragraph(line)) : [])] }),
-    new TableCell({ width: { size: widths[1], type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: { top: 80, bottom: 80, left: 90, right: 90 }, children: row.content.split("\n").map(line => paragraph(line, /^ANNOTATION|^(?:SESSION|SESYON) \d/.test(line))) }),
-  ] }));
+  type ParaOptions = { bold?: boolean; italics?: boolean; underline?: boolean; center?: boolean; size?: number; gap?: boolean; after?: number };
+  const paragraph = (text: string, { bold = false, italics = false, underline = false, center = false, size = 10, gap = false, after = 0 }: ParaOptions = {}) => new Paragraph({ alignment: center ? AlignmentType.CENTER : AlignmentType.LEFT, keepNext: bold || !text.trim(), spacing: { before: gap ? GAP_PT * 20 : 0, after, line: 240 }, children: [new TextRun({ text, bold, italics, ...(underline ? { underline: {} } : {}), size: Math.round(size * 2), font: "Bookman Old Style" })] });
+  const cellMargins = { top: cellPad.v, bottom: cellPad.v, left: cellPad.h, right: cellPad.h };
+  const rows = cotIlawRows(p).map(row => { const style = ilawLabelStyle(row, layout); return new TableRow({ children: [
+    new TableCell({ width: { size: widths[0], type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: cellMargins, children: [paragraph(row.label + (row.guidance ? ":" : ""), { bold: style.bold, italics: style.italic, underline: style.underline, size: style.size }), ...(row.guidance ? ilawParagraphs(row.guidance).map(para => paragraph(para.text, { italics: style.guideItalic, size: style.guideSize, gap: para.gap })) : [])] }),
+    new TableCell({ width: { size: widths[1], type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: cellMargins, children: ilawParagraphs(row.content).map(para => paragraph(para.text, { bold: /^ANNOTATION|^(?:SESSION|SESYON) \d/.test(para.text), size: layout.body, gap: para.gap })) }),
+  ] }); });
   const labels = lessonPlanLabels(p.sourcePlan.area);
-  const sign = (lines: string[]) => new TableCell({ borders: { top: none, bottom: none, left: none, right: none }, children: [paragraph(lines[0], false, true), paragraph(""), paragraph(lines[1], true, true), paragraph(lines[2], false, true)] });
-  const doc = new Document({ styles: { default: { document: { run: { font: "Bookman Old Style", size: 20, color: "000000" } } } }, sections: [{ properties: { page: { size: { width: 16838, height: 11906 }, margin } }, children: [
-    ...(logo ? [new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: "png", data: logo, transformation: { width: 54, height: 54 } })] })] : []),
-    ...cotIlawHeader(p).map((line, i) => paragraph(line, i === 1 || line === p.sourcePlan.profile.school, true)),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 120, after: 120 }, children: [new TextRun({ text: "LESSON PLAN", bold: true, size: 24 })] }),
-    paragraph(cotObservationLine(p)),
+  const sign = (lines: string[]) => new TableCell({ borders: { top: none, bottom: none, left: none, right: none }, children: [paragraph(lines[0], { center: true, after: 60 }), paragraph("", { after: 60 }), paragraph(lines[1], { bold: true, center: true, after: 60 }), paragraph(lines[2], { center: true, after: 60 })] });
+  const doc = new Document({ styles: { default: { document: { run: { font: "Bookman Old Style", size: 22, color: "000000" } } } }, sections: [{ properties: { page: { size: { width: 16838, height: 11906 }, margin } }, children: [
+    ...(logo ? [new Paragraph({ alignment: AlignmentType.CENTER, children: [new ImageRun({ type: "png", data: logo, transformation: { width: 68, height: 68 } })] })] : []),
+    ...cotIlawHeader(p).map(line => paragraph(line, { bold: line === p.sourcePlan.profile.school, center: true })),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 120, after: 60 }, children: [new TextRun({ text: "LESSON PLAN", bold: true, size: 36 })] }),
     new Table({ width: { size: 16188, type: WidthType.DXA }, columnWidths: widths, borders: { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border }, rows }),
     paragraph(""),
     new Table({ width: { size: 16188, type: WidthType.DXA }, columnWidths: [8094, 8094], borders: { top: none, bottom: none, left: none, right: none, insideHorizontal: none, insideVertical: none }, rows: [new TableRow({ cantSplit: true, children: [sign([labels.preparedBy, p.teacherName, localizedPosition(p.position, p.sourcePlan.area)]), sign([labels.reviewedBy, p.observer || "____________________________", p.observer === p.sourcePlan.profile.schoolHead ? localizedPosition(p.sourcePlan.profile.schoolHeadPosition, p.sourcePlan.area) : "Observer / Reviewer"]) ] })] }),
@@ -104,28 +153,39 @@ export async function buildIlawCotWord(p: CotLesson, seal: Uint8Array | null = n
 }
 
 export async function buildIlawCotPdf(p: CotLesson, seal: Uint8Array | null = null) {
+  const logo = seal || await sealData();
+  // Use the largest text size (10pt down to 8pt) that keeps the PDF within ILAW_MAX_PAGES pages.
+  let bytes = new Uint8Array(0);
+  for (const size of ILAW_SIZES) {
+    const result = await renderIlawCotPdf(p, logo, ilawLayoutFor(size));
+    bytes = result.bytes;
+    if (result.pages <= ILAW_MAX_PAGES) break;
+  }
+  return bytes;
+}
+
+async function renderIlawCotPdf(p: CotLesson, logo: Uint8Array | null, layout: IlawLayout) {
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
   const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-  const logo = seal || await sealData(), pageWidth = pdf.internal.pageSize.getWidth(), pageHeight = pdf.internal.pageSize.getHeight();
+  const pageWidth = pdf.internal.pageSize.getWidth(), pageHeight = pdf.internal.pageSize.getHeight();
   let y = 28;
   if (logo) { pdf.addImage(logo, "PNG", pageWidth / 2 - 27, y, 54, 54); y += 67; }
   pdf.setFontSize(10);
   cotIlawHeader(p).forEach((line, i) => { pdf.setFont("times", i === 1 || line === p.sourcePlan.profile.school ? "bold" : "normal"); pdf.text(line, pageWidth / 2, y, { align: "center" }); y += 12; });
-  pdf.setFont("times", "bold"); pdf.setFontSize(12); pdf.text("LESSON PLAN", pageWidth / 2, y + 7, { align: "center" }); y += 25;
+  pdf.setFont("times", "bold"); pdf.setFontSize(12); pdf.text("LESSON PLAN", pageWidth / 2, y + 7, { align: "center" }); y += 22;
   pdf.setFont("times", "normal"); pdf.setFontSize(10);
-  const observation = pdf.splitTextToSize(cotObservationLine(p), pageWidth - 32) as string[];
-  pdf.text(observation, 16, y); y += observation.length * 12 + 10;
   // Keep an activity with its explanation when it fits on a page. Invisible
   // internal horizontal borders preserve the reference's single Flow cell look.
+  const compact = (text: string) => text.replace(/\n\s*\n/g, "\n");
   const pdfRows = cotIlawRows(p).flatMap(row => {
     const parts = row.label === "Flow" || row.label === "Pre-Lesson" ? row.content.split(/\n\n(?=(?:SESSION|SESYON) \d)/) : [row.content];
     if (parts.length > 1 && !/^(SESSION|SESYON) \d/.test(parts[0])) parts.splice(0, 2, `${parts[0]}\n\n${parts[1]}`);
     return parts.map((part, index) => {
       const lineWidth = { left: .4, right: .4, top: index === 0 ? .4 : 0, bottom: index === parts.length - 1 ? .4 : 0 };
-      return [{ content: index === 0 ? `${row.label}${row.guidance ? ":\n" + row.guidance : ""}` : "", styles: { lineWidth } }, { content: part, styles: { lineWidth } }];
+      return [{ content: index === 0 ? `${row.label}${row.guidance ? ":\n" + compact(row.guidance) : ""}` : "", styles: { lineWidth } }, { content: compact(part), styles: { lineWidth } }];
     });
   });
-  autoTable(pdf, { startY: y, body: pdfRows, theme: "grid", styles: { font: "times", fontSize: 10, cellPadding: 5, valign: "top", overflow: "linebreak", lineColor: [0, 0, 0], lineWidth: .4 }, columnStyles: { 0: { cellWidth: (pageWidth - 32) * widths[0] / 16188, fontStyle: "bolditalic" } }, margin: { top: 28, bottom: 16, left: 16, right: 16 }, rowPageBreak: "avoid" });
+  autoTable(pdf, { startY: y, body: pdfRows, theme: "grid", styles: { font: "times", fontSize: layout.body, cellPadding: 4, valign: "top", overflow: "linebreak", lineColor: [0, 0, 0], lineWidth: .4 }, columnStyles: { 0: { cellWidth: (pageWidth - 32) * widths[0] / 16188, fontStyle: "bolditalic", fontSize: Math.max(layout.guide, layout.body - 1) } }, margin: { top: 28, bottom: 16, left: 16, right: 16 }, rowPageBreak: "avoid" });
   y = (pdf as typeof pdf & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 22;
   if (y + 65 > pageHeight - 16) { pdf.addPage(); y = 36; }
   const labels = lessonPlanLabels(p.sourcePlan.area);
@@ -133,10 +193,11 @@ export async function buildIlawCotPdf(p: CotLesson, seal: Uint8Array | null = nu
     const x = pageWidth * (i ? .75 : .25);
     pdf.setFont("times", "normal"); pdf.text(lines[0], x, y, { align: "center" }); pdf.setFont("times", "bold"); pdf.text(lines[1], x, y + 30, { align: "center" }); pdf.setFont("times", "normal"); pdf.text(lines[2], x, y + 44, { align: "center" });
   }
-  return new Uint8Array(pdf.output("arraybuffer"));
+  return { bytes: new Uint8Array(pdf.output("arraybuffer")), pages: pdf.getNumberOfPages() };
 }
 
 export function ilawCotPrintHtml(p: CotLesson) {
-  const labels = lessonPlanLabels(p.sourcePlan.area);
-  return `<!doctype html><html><head><meta charset="utf-8"><title>ILAW COT Lesson Plan</title><style>@page{size:A4 landscape;margin:10mm 5mm 5mm}body{font:10pt "Bookman Old Style",Georgia,serif;color:#000}.heading{text-align:center}.heading img{width:54px;height:54px}.heading p{margin:2px}h1{font-size:12pt;margin:10px 0}p{line-height:1.3;white-space:pre-wrap}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:.5pt solid #000;padding:5px;vertical-align:top;white-space:pre-wrap;overflow-wrap:anywhere}th{width:18.36%;text-align:left;font-style:italic}th small{display:block;font-size:10pt;font-style:normal;font-weight:normal;margin-top:4px}.section th{font-style:normal}.signatures{display:grid;grid-template-columns:1fr 1fr;text-align:center;break-inside:avoid;margin-top:20px}.signatures strong{display:block;margin-top:30px}</style></head><body><header class="heading"><img src="/deped-seal.png" alt="Department of Education seal">${cotIlawHeader(p).map(line => `<p>${esc(line)}</p>`).join("")}<h1>LESSON PLAN</h1></header><p>${esc(cotObservationLine(p))}</p><table><tbody>${cotIlawRows(p).map(row => `<tr class="${row.section ? "section" : ""}"><th scope="row">${esc(row.label)}${row.guidance ? `<small>${esc(row.guidance)}</small>` : ""}</th><td>${esc(row.content)}</td></tr>`).join("")}</tbody></table><div class="signatures"><div>${esc(labels.preparedBy)}<strong>${esc(p.teacherName)}</strong>${esc(localizedPosition(p.position, p.sourcePlan.area))}</div><div>${esc(labels.reviewedBy)}<strong>${esc(p.observer || "____________________________")}</strong>${esc(p.observer === p.sourcePlan.profile.schoolHead ? localizedPosition(p.sourcePlan.profile.schoolHeadPosition, p.sourcePlan.area) : "Observer / Reviewer")}</div></div></body></html>`;
+  const labels = lessonPlanLabels(p.sourcePlan.area), layout = ilawLayout(p);
+  const paras = (text: string) => ilawParagraphs(text).map(para => `<p class="${para.gap ? "gap" : ""}">${esc(para.text)}</p>`).join("");
+  return `<!doctype html><html><head><meta charset="utf-8"><title>ILAW COT Lesson Plan</title><style>@page{size:A4 landscape;margin:10mm 5mm 5mm}body{font:${layout.body}pt "Bookman Old Style",Georgia,serif;color:#000}.heading{text-align:center}.heading img{width:54px;height:54px}.heading p{margin:2px;font-size:10pt}h1{font-size:12pt;margin:8px 0}p{line-height:1.2;margin:0 0 2pt}p.gap{margin-top:${GAP_PT}pt}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:.5pt solid #000;padding:2pt 3.6pt;vertical-align:top;overflow-wrap:anywhere}th{width:18.36%;text-align:left;font-style:normal;font-weight:normal}th small{display:block;font-style:normal;margin-top:2pt}th small.i{font-style:italic}th small p{margin:0 0 2pt}.signatures{display:grid;grid-template-columns:1fr 1fr;text-align:center;break-inside:avoid;margin-top:20px}.signatures strong{display:block;margin-top:30px}</style></head><body><header class="heading"><img src="/deped-seal.png" alt="Department of Education seal">${cotIlawHeader(p).map(line => `<p>${esc(line)}</p>`).join("")}<h1>LESSON PLAN</h1></header><table><tbody>${cotIlawRows(p).map(row => `<tr class="${row.section ? "section" : ""}"><th scope="row">${(() => { const st = ilawLabelStyle(row, layout); return `<span style="font-size:${st.size}pt;font-weight:${st.bold ? "bold" : "normal"};font-style:${st.italic ? "italic" : "normal"};text-decoration:${st.underline ? "underline" : "none"}">${esc(row.label + (row.guidance ? ":" : ""))}</span>${row.guidance ? `<small class="${st.guideItalic ? "i" : ""}" style="font-size:${st.guideSize}pt">${paras(row.guidance)}</small>` : ""}`; })()}</th><td>${paras(row.content)}</td></tr>`).join("")}</tbody></table><div class="signatures"><div>${esc(labels.preparedBy)}<strong>${esc(p.teacherName)}</strong>${esc(localizedPosition(p.position, p.sourcePlan.area))}</div><div>${esc(labels.reviewedBy)}<strong>${esc(p.observer || "____________________________")}</strong>${esc(p.observer === p.sourcePlan.profile.schoolHead ? localizedPosition(p.sourcePlan.profile.schoolHeadPosition, p.sourcePlan.area) : "Observer / Reviewer")}</div></div></body></html>`;
 }
