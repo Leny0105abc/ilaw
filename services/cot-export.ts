@@ -1,5 +1,4 @@
 import { CotLesson } from "@/types/cot";
-import { WeeklyPowerPoint } from "@/types/powerpoint";
 import { cotCoverage, cotEvidence, cotMaterialsStale, validateCotContent } from "@/services/cot-generator";
 import { learningAreaLabel } from "@/data/curriculum";
 import { buildIlawCotPdf, buildIlawCotWord, ilawCotPrintHtml, roleText, type CotLessonFormat } from "@/services/cot-ilaw-format";
@@ -108,15 +107,15 @@ export async function buildCotPdf(p: CotLesson, part: CotPart, format: CotLesson
     });
     return new Uint8Array(pdf.output("arraybuffer"));
 }
-function deckAdapter(p: CotLesson): WeeklyPowerPoint { return { id: p.id, grade: p.sourcePlan.grade, subject: p.sourcePlan.area, term: p.sourcePlan.term, week: p.sourcePlan.week, title: p.title, competencies: [{ id: "cot-snapshot", text: p.sourcePlan.competencyText, source: p.sourcePlan.references }], slideCount: 20, organization: "weekly", sourcePlanId: p.sourcePlan.id, sourceLesson: null, sourceNotes: "", slides: p.slides, createdAt: p.createdAt, updatedAt: p.updatedAt }; }
 export async function buildCotPowerPoint(p: CotLesson) {
     validateCotContent(p);
     if (!p.slides.length || cotMaterialsStale(p))
         throw new Error("Generate or refresh the COT PowerPoint after your lesson edits.");
-    p.slides.forEach(slide => { if (!slide.title.trim() || slide.title.length > 110 || slide.bullets.length > 6 || slide.bullets.some(text => !text.trim() || text.length > 160))
-        throw new Error("Keep each slide concise: title 110 characters, up to six bullets of 160 characters."); });
-    const { buildEditablePowerPointFile, packEditablePowerPoint } = await import("@/services/powerpoint-export");
-    return packEditablePowerPoint(await buildEditablePowerPointFile(deckAdapter(p)));
+    p.slides.forEach(slide => { if (!slide.title.trim() || slide.title.length > 110 || slide.bullets.length > 6 || slide.bullets.some(text => !text.trim() || text.length > 220))
+        throw new Error("Keep each slide concise: title 110 characters, up to six bullets of 220 characters."); });
+    // Designed classroom deck that follows the COT lesson sequence.
+    const [{ buildCotDeckFile }, { packEditablePowerPoint }] = await Promise.all([import("@/services/cot-deck-pptx"), import("@/services/powerpoint-export")]);
+    return packEditablePowerPoint(await buildCotDeckFile(p));
 }
 export async function buildCotPackage(p: CotLesson) {
     validateCotContent(p);

@@ -15,6 +15,12 @@ function lineCount(text: string, charsPerLine: number) {
 }
 const charsPerLine = (widthIn: number, pt: number, em = .52) => Math.max(8, Math.floor(widthIn / (pt * em / 72)));
 
+// Estimated height (inches) of the paragraphs at a given size.
+export function textHeight(paragraphs: string[], widthIn: number, sizePt: number, lineSpacing = 1, gapPt = 0) {
+  const lines = paragraphs.reduce((sum, text) => sum + lineCount(text, charsPerLine(widthIn, sizePt)), 0);
+  return lines * sizePt * 1.2 * lineSpacing / 72 + Math.max(paragraphs.length - 1, 0) * gapPt / 72;
+}
+
 // Largest font size (pt) at which the paragraphs fit the box.
 export function fitFontSize(paragraphs: string[], widthIn: number, heightIn: number, maxPt: number, minPt: number, lineSpacing = 1, gapPt = 0) {
   for (let pt = maxPt; pt > minPt; pt--) {

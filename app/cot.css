@@ -4,3 +4,24 @@
 .cot-page label:not(.cot-check){display:flex;flex-direction:column;gap:.35rem;font-size:.85rem;font-weight:600}.cot-page input:not([type=checkbox]):not([type=radio]),.cot-page select,.cot-page textarea{width:100%;border:1px solid #cfd9e8;border-radius:9px;background:#fff;color:#172033;padding:.7rem .8rem;font-weight:400}.cot-page input:focus,.cot-page select:focus,.cot-page textarea:focus{outline:2px solid #9fb8e6;outline-offset:1px}.cot-page .library-card>label{margin-bottom:16px}.cot-page .cot-check{font-weight:400}.cot-page a{overflow-wrap:anywhere}
 @media(max-width:800px){.cot-position-list{grid-template-columns:1fr 1fr}.cot-page .field-grid.four{grid-template-columns:1fr 1fr}.cot-activity{padding:14px}.cot-actions button{flex:1}.cot-tabs{max-width:100%}.cot-page .page-heading{flex-wrap:wrap}}
 @media(max-width:480px){.cot-position-list,.cot-page .field-grid,.cot-page .field-grid.four{grid-template-columns:1fr}.cot-export button{flex:1}}
+/* COT classroom deck preview (mirrors the PowerPoint design; 1in of a 13.33in slide = 7.5cqw). */
+.cot-deck-slide{position:relative;aspect-ratio:16/9;container-type:inline-size;background:#0b1a33;color:#1b2a41;border-radius:6px;overflow:hidden;padding:2.2cqw 3.4cqw;display:flex;flex-direction:column;gap:1.6cqw;margin:12px 0;font-family:Calibri,Arial,sans-serif;border-bottom:.9cqw solid #f7931e}
+.cot-deck-slide::after{content:"";position:absolute;right:-2cqw;top:-2cqw;width:28cqw;height:14cqw;background:repeating-linear-gradient(155deg,transparent 0 1.6cqw,rgba(45,125,210,.35) 1.6cqw 1.75cqw);pointer-events:none}
+.cot-deck-banner{background:#1f4e9a;color:#fff;font:700 2.6cqw/1.2 Arial,sans-serif;padding:1.2cqw 1.6cqw;border-bottom:.55cqw solid #f7931e}
+.cot-deck-panel{background:#fff;border-radius:1cqw;padding:1.6cqw 2.2cqw 1.6cqw 4.4cqw;margin:0;font-size:2.3cqw;line-height:1.35;box-shadow:0 .3cqw .8cqw rgba(0,0,0,.25)}
+.cot-deck-panel li{margin-bottom:.6cqw}ul.cot-deck-panel{list-style:disc}ol.cot-deck-panel{list-style:decimal}
+.cot-deck-heading{font:900 3cqw/1.1 "Arial Black",Arial,sans-serif;color:#f7931e}
+.cot-deck-title{color:#fff;margin-top:4cqw}.cot-deck-title .subject{color:#ffb547;font:700 2cqw Arial,sans-serif;margin:0}.cot-deck-title h3{color:#f7931e;font:900 4.4cqw/1.15 "Arial Black",Arial,sans-serif;margin:1cqw 0 5cqw;max-width:72cqw}.cot-deck-title .people{display:grid;font:1.6cqw Arial,sans-serif;margin:0}.cot-deck-title .people span:first-child{color:#ffb547;font-weight:700;font-size:1.9cqw}
+.cot-deck-prayer{text-align:center;font-family:Georgia,serif;padding:2.4cqw}.cot-deck-prayer p{margin:0 0 .8cqw}.cot-deck-prayer p:last-child{font-weight:700}
+.cot-deck-rules{list-style:none;margin:0;padding:0 8cqw;display:grid;gap:1.4cqw}.cot-deck-rules li{background:#e4ddf7;border-radius:3cqw;font-weight:700;font-size:2.2cqw;padding:1.1cqw 2cqw 1.1cqw 1cqw;display:flex;align-items:center;gap:2cqw}.cot-deck-rules span{background:#f7931e;color:#fff;border-radius:50%;width:4.6cqw;height:4.6cqw;display:grid;place-items:center;font:900 2cqw "Arial Black",Arial;flex:none;margin-left:-3cqw;border:.3cqw solid #fff}
+.cot-deck-game{text-align:center;margin-top:3cqw}.cot-deck-game h3{color:#f7931e;font:900 5cqw "Arial Black",Arial,sans-serif;margin:0 0 3cqw}.cot-deck-game .cot-deck-panel{padding:2.4cqw;margin:0 18cqw}.cot-deck-game b{color:#1f5fbf;font-size:3cqw;display:block}.cot-deck-game p{margin:.8cqw 0 0;font-size:1.8cqw}
+.cot-deck-word{text-align:center;font:900 6.5cqw/1.3 "Arial Black",Arial,sans-serif;letter-spacing:.5cqw;padding:3.5cqw 2cqw;border:.25cqw solid #f7931e}
+.cot-deck-definition{background:#e8f1fc;border:.2cqw solid #2d7dd2;border-radius:1cqw;text-align:center;font:2.4cqw/1.35 Georgia,serif;padding:2cqw}
+.cot-deck-panel .term{color:#1f5fbf}
+.cot-deck-group{padding:2.4cqw 4cqw;flex:1}.cot-deck-group h3{text-align:center;font:700 2.8cqw Arial,sans-serif;margin:0}.cot-deck-group h3 span{color:#1f5fbf}.cot-deck-group>p{text-align:center;margin:.6cqw 0 1.6cqw;font-size:1.6cqw}.cot-deck-group ol{padding-left:3cqw;margin:0}
+.cot-deck-quiz{padding-left:2.2cqw;font-size:1.8cqw}.cot-deck-quiz div{margin-bottom:1.2cqw}.cot-deck-quiz p{margin:.3cqw 0 0 1.6cqw;display:flex;flex-wrap:wrap;gap:.4cqw 3cqw}
+.cot-deck-note{background:#fff4cc;border:.2cqw solid #ffb547;border-radius:1cqw;padding:1.2cqw 1.8cqw;font-size:2cqw}
+.cot-deck-split{display:grid;grid-template-columns:7.75fr 4.1fr;gap:2.3cqw;align-items:start}
+.cot-deck-callout{background:#e3f4e6;border:.2cqw solid #8bc79a;border-radius:1cqw;font:2.6cqw/1.3 Georgia,serif;text-align:center;padding:3cqw 1.6cqw;align-self:start}
+.cot-deck-thanks{text-align:right;color:#fff;margin:auto 0}.cot-deck-thanks h3{color:#f7931e;font:900 6cqw "Arial Black",Arial,sans-serif;margin:0 0 1cqw}.cot-deck-thanks p{margin:0;font:1.6cqw Arial,sans-serif}.cot-deck-thanks p:first-of-type{font-weight:700}
+.cot-deck-number{position:absolute;right:2cqw;bottom:1.4cqw;color:#8fa6c8;font-size:1.2cqw}

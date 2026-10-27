@@ -124,6 +124,8 @@ export type CotLesson = {
     worksheets: CotWorksheet[];
     assessmentKind: "multiple-choice" | "identification" | "exit-ticket" | "performance-task";
     assessment: CotAssessmentItem[];
+    // Key terms for "unlocking of difficulties" (vocabulary game and definition slides).
+    keyTerms?: { term: string; definition: string }[];
     slides: WeeklySlide[];
     showAnnotations: boolean;
     materialFingerprint: string;

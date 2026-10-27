@@ -9,7 +9,11 @@ export type WeeklySlide = {
   visual: string; table: { headers: string[]; rows: string[][] } | null;
   notes: string; questions: QuizItem[];
   scenario?: SlideScenario | null;
+  // COT classroom decks only: which designed layout to use, and an optional highlighted question/line.
+  cotLayout?: CotSlideLayout;
+  callout?: string;
 };
+export type CotSlideLayout = "title" | "prayer" | "rules" | "objectives" | "activity" | "game" | "puzzle" | "term" | "terms" | "questions" | "practice" | "group" | "quiz" | "assignment" | "annotations" | "thanks";
 // Teacher approval of one exact version of the deck. Any later edit changes the fingerprint.
 export type PowerPointReview = { fingerprint: string; reviewedAt: string; confirmations: string[] };
 export type WeeklyPowerPoint = {

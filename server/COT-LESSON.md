@@ -49,3 +49,16 @@ Keep the existing production `.htaccess`, private `ilaw-auth.env`, private AI co
 Checks: `pnpm typecheck`, targeted ESLint, `pnpm verify:cot`, `pnpm verify:assessment`, `pnpm verify:tos`, `pnpm verify:powerpoint`, `pnpm verify:auth` and production build. `verify:cot --artifacts` adds native document/slide/package structural checks. Full-repository lint also reports pre-existing Dashboard hook and older ignored QA-script issues; those unrelated files were not changed for COT.
 
 Browser verification uses a disposable PHP preview, real UI interactions and self-authored software-test lesson content, not a claim of live AI quality. The tested path includes saved lesson → COT setup → prompt/JSON import → evidence review → materials/assessment → explicit Ready → save/reopen → downloaded 12-file ZIP, with the original lesson retained. PDF/PPTX were rendered for visual review; the COT Word sample opened without repair in Microsoft Word and its native eight-page PDF render was inspected. The packaged LibreOffice renderer was unavailable on this Windows host, so Word supplied the native DOCX layout render instead.
+
+## COT classroom PowerPoint (lesson-plan aligned)
+
+Generate COT PowerPoint builds a designed deck (dark navy background, blue banners, white panels, orange headings) that follows the COT lesson plan, modelled on a teacher-made COT demonstration deck:
+
+1. Title (subject, lesson, teacher, position, school) → Opening Prayer → Our Class Rules → Objectives (verb in bold).
+2. Review (with the review question highlighted) → Motivation "Activity: “…”" with the teacher's question.
+3. "Let's Play a Game – Find the Missing Letter": a puzzle slide and a reveal slide (term + definition) for up to four key terms, then Definition of Terms. Key terms come from the AI answer's optional `keyTerms`; older answers fall back to "Term – definition" lines in the activities, or skip the game.
+4. Discussion slides and Guide Questions → Guided Practice (instructions + tasks) → Group Activity and three group cards (Explorers, Problem Solvers, Creators — no ability labels) from the support/core/extension tasks.
+5. Formative check and Multiple Choice slides (several questions per slide when short; answers only in speaker notes) placed before the closing of their own session.
+6. Generalization (closing question highlighted) → Assignment (from extended learning) → Thank You.
+
+Teacher actions, anticipated responses, quiz answers and COT annotations stay in speaker notes. The prayer and class rules are editable defaults (Filipino wording for Filipino-medium subjects). Slides can be edited in the POWERPOINT tab, which previews the same design; quiz questions are edited in the ASSESSMENT tab and refreshed with Generate COT PowerPoint. Previously generated decks keep their slides but download in the new design; regenerate to get the new sequence.

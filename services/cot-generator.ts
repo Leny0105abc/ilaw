@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { LessonPlan } from "@/types/lesson-plan";
 import { CotAlignment, CotLesson, teacherPositions } from "@/types/cot";
-import { WeeklySlide } from "@/types/powerpoint";
 import { AITransport, assessmentRequest } from "@/services/assessment-ai";
 import { indicatorSchema } from "@/services/cot-library";
+import { buildCotSlides } from "@/services/cot-deck";
 const text = z.string().trim().min(1).max(4000);
 const lines = z.array(text).max(12);
 const indexes = z.array(z.number().int().min(1)).min(1).max(30);
@@ -11,7 +11,7 @@ export const cotActivitySchema = z.object({ id: text, session: z.number().int().
 const evidence = z.object({ activityId: text, teacherQuote: text, learnerQuote: text, annotation: text, observableEvidence: text }).strict();
 export const cotAlignmentSchema = z.object({ indicatorId: text, coverage: z.enum(["clear", "partial", "none"]), evidence: z.array(evidence).max(16), reason: text, suggestion: z.object({ activityId: text, teacherActivity: text, learnerActivity: text, reason: text }).strict().nullable() }).strict();
 export const cotAssessmentSchema = z.object({ id: text, activityId: text, objectiveIndices: indexes, indicatorIds: lines, question: text, choices: z.object({ A: text, B: text, C: text, D: text }).strict().nullable(), answer: text, expectedEvidence: text, rubric: z.array(z.object({ criterion: text, points: z.number().int().min(1).max(100) }).strict()).max(8) }).strict();
-export const cotResponseSchema = z.object({ version: z.literal(1), requestId: text, activities: z.array(cotActivitySchema).min(1).max(32), alignments: z.array(cotAlignmentSchema).min(1).max(30), assessment: z.array(cotAssessmentSchema).min(1).max(12) }).strict();
+export const cotResponseSchema = z.object({ version: z.literal(1), requestId: text, activities: z.array(cotActivitySchema).min(1).max(32), alignments: z.array(cotAlignmentSchema).min(1).max(30), assessment: z.array(cotAssessmentSchema).min(1).max(12), keyTerms: z.array(z.object({ term: z.string().trim().min(2).max(40), definition: z.string().trim().min(3).max(160) }).strict()).max(8).optional() }).strict();
 export function cotHash(value: unknown) { let hash = 2166136261; for (const character of JSON.stringify(value))
     hash = Math.imul(hash ^ character.charCodeAt(0), 16777619); return (hash >>> 0).toString(16); }
 export function allocateCotMinutes(total: number, count: number): number[] {
@@ -67,7 +67,7 @@ For EVERY slot return a complete activity with the same id, session, phase and m
 ILAW reference presentation follows the teacher's COT ILAW FORMAT_K blank form: opening routines, review and motivation appear under Pre-Lesson; discussion, examples, guided practice, differentiated work, formative checks and closing appear under Flow. Use short classroom-ready lines, concrete topic explanations and guide questions.
 STYLE REFERENCE — follow the qualities of a strong teacher-made COT lesson, adapted to THIS lesson's topic, subject and learners. Never copy a reference topic, wording, activity name or indicator number, and vary activity names, examples and contexts from lesson to lesson:
 - Pre-Lesson: brief routines (prayer, attendance, house rules) and a short review, then a NAMED topic-specific motivation activity (e.g. a quick challenge, picture/data/object analysis) with the teacher's exact questions in quotation marks.
-- Unlocking of difficulties: 3–6 key terms of this lesson, each with a one-line learner-friendly definition.
+- Unlocking of difficulties: 3–6 key terms of this lesson, each with a one-line learner-friendly definition. Also return them in keyTerms ([{"term":"...","definition":"..."}]; term at most 40 characters, preferably one word; definition at most 160 characters). ILAW turns keyTerms into a "Find the missing letter" vocabulary game and a Definition of Terms slide.
 - State the purpose in one teacher line in quotation marks (Teacher says: "Today, we will …").
 - Demonstrate with concrete, correct examples of this topic that learners can see (steps, syntax, formulas, models, labelled parts, sample sentences or cases).
 - Number the guide questions; include at least one higher-order question and one real-life question.
@@ -159,7 +159,7 @@ export function importCotResponse(p: CotLesson, text: string): CotLesson {
         throw new Error(`Return all ${slots.length} activity slots exactly once.`);
     const activities = slots.map(slot => { const a = result.activities.find(a => a.id === slot.id); if (!a || a.session !== slot.session || a.phase !== slot.phase || a.minutes !== slot.minutes)
         throw new Error(`Keep the id, session, phase and minutes for ${slot.id}.`); return normalizeWorksheetNotes(a); });
-    const next = { ...p, generationFingerprint: cotRequestId(p), activities, alignments: result.alignments.map(a => ({ ...a, teacherReviewed: false })), assessment: result.assessment, slides: [], worksheets: [], materialFingerprint: "", teacherReviewed: false, status: "Draft" as const, updatedAt: new Date().toISOString() };
+    const next = { ...p, generationFingerprint: cotRequestId(p), activities, keyTerms: result.keyTerms ?? [], alignments: result.alignments.map(a => ({ ...a, teacherReviewed: false })), assessment: result.assessment, slides: [], worksheets: [], materialFingerprint: "", teacherReviewed: false, status: "Draft" as const, updatedAt: new Date().toISOString() };
     validateCotContent(next);
     return next;
 }
@@ -216,30 +216,12 @@ export function validateCotContent(p: CotLesson) {
 }
 export function cotMaterialHash(p: CotLesson) { return cotHash({ activities: p.activities, assessment: p.assessment, objectives: p.objectives, competency: p.sourcePlan.competencyText, title: p.title, annotations: p.showAnnotations, alignments: p.alignments }); }
 export function cotMaterialsStale(p: CotLesson) { return p.materialFingerprint !== cotMaterialHash(p); }
-function brief(text: string, max = 160) { return text.length <= max ? text : text.slice(0, max - 1).replace(/\s+\S*$/, "") + "…"; }
-function chunks(text:string,max=160){const result:string[]=[];let remaining=text.trim();while(remaining.length>max){let at=remaining.lastIndexOf(" ",max);if(at<max/2)at=max;result.push(remaining.slice(0,at));remaining=remaining.slice(at).trim();}if(remaining)result.push(remaining);return result;}
 export function generateCotMaterials(p: CotLesson): CotLesson {
     validateCotContent({...p,worksheets:[]});
-    const slides: WeeklySlide[] = [];
-    const activitySlideIds=new Map<string,string>();
-    const add = (title: string, bullets: string[], notes = "", kind: WeeklySlide["kind"] = "content") => slides.push({ id: crypto.randomUUID(), kind, day: 0, title: brief(title, 110), bullets, visual: "", table: null, notes, questions: [] });
-    add(p.title, [`Grade ${p.sourcePlan.grade} / ${p.sourcePlan.area}`, `Week ${p.sourcePlan.week}`], "", "title");
-    const objectiveBullets=p.objectives.flatMap(t=>chunks(t));
-    for (let i = 0; i < objectiveBullets.length; i += 4)
-        add(i ? "Learning objectives continued" : "Learning objectives", objectiveBullets.slice(i, i + 4), p.objectives.join("\n"));
-    p.activities.forEach(a => {
-        const annotations = p.alignments.flatMap(al => cotEvidence(p, al).filter(e => e.activityId === a.id).map(e => `PPST ${p.indicators.find(i => i.id === al.indicatorId)?.code} (${cotCoverage(p, al)} planned coverage): ${e.annotation}\nExpected evidence: ${e.observableEvidence}`));
-        const notes = [`${a.minutes} minutes\n${a.teacherActivity}\n${a.learnerActivity}`, ...a.questions.map(q => `${q.question}\nAnticipated: ${q.responses.join("; ")}\nProbe: ${q.followUp}`), ...annotations].join("\n\n");
-        add(a.title, a.slideBullets, notes);
-        activitySlideIds.set(a.id,slides[slides.length-1].id);
-        if (p.showAnnotations && annotations.length)
-            for (let n = 0; n < annotations.length; n += 3)
-                add("Teacher selected COT annotations", annotations.slice(n, n + 3).map(t => brief(t)), annotations.slice(n, n + 3).join("\n"));
-    });
+    // Teacher-only annotations go into speaker notes (or annotation slides when deliberately shown).
+    const annotationsFor = (activityId: string) => p.alignments.flatMap(al => cotEvidence(p, al).filter(e => e.activityId === activityId).map(e => `PPST ${p.indicators.find(i => i.id === al.indicatorId)?.code} (${cotCoverage(p, al)} planned coverage): ${e.annotation}\nExpected evidence: ${e.observableEvidence}`));
+    const slides = buildCotSlides(p, annotationsFor);
     const worksheets = p.activities.filter(a => /Guided|Differentiated/.test(a.phase)).map(a => ({ id: `sheet-${a.id}`, activityId: a.id, title: a.title, instructions: a.worksheet?.instructions||a.learnerActivity, tasks:a.worksheet?.tasks||[...a.questions.map(q => q.question), ...(a.phase === "Differentiated practice" ? [`Guided task: ${a.differentiation.support}`, `Independent task: ${a.differentiation.core}`, `Extension task: ${a.differentiation.extension}`] : [])], teacherKey:a.worksheet?.teacherKey||[...a.questions.map(q => q.responses.join("; ")),...(a.phase==="Differentiated practice"?Array(3).fill(a.formative.expectedEvidence):[])], teacherNotes:a.worksheet?.teacherNotes||[] }));
-    // Assessment belongs before the final synthesis/closing activity, not after closing.
-    const assessmentSlides=p.assessment.map((item,index)=>{const points=[...chunks(item.question),...(item.choices?(["A","B","C","D"] as const).map(l=>`${l}. ${item.choices![l]}`):[])];const result:WeeklySlide[]=[];for(let n=0;n<points.length;n+=5)result.push({id:crypto.randomUUID(),kind:"content",day:0,title:`${p.assessmentKind==="multiple-choice"?"Check for understanding":"Assessment"} ${index+1}${n?" continued":""}`,visual:"",table:null,notes:`Complete task: ${item.question}\nTeacher answer: ${item.answer}\n${item.expectedEvidence}`,questions:[],bullets:points.slice(n,n+5)});return result;});
-    p.selectedSessions.forEach(session=>{const items=p.assessment.map((item,index)=>({item,index})).filter(({item})=>p.activities.find(a=>a.id===item.activityId)?.session===session);const closing=p.activities.find(a=>a.session===session&&a.phase==="Generalization and closing");const at=slides.findIndex(s=>s.id===activitySlideIds.get(closing?.id||""));slides.splice(at<0?slides.length:at,0,...items.flatMap(({index})=>assessmentSlides[index]));});
     const next = { ...p, slides, worksheets, updatedAt: new Date().toISOString() };
     next.materialFingerprint = cotMaterialHash(next);
     return next;
