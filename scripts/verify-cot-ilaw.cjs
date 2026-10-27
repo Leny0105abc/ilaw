@@ -26,7 +26,9 @@ async function main() {
   assert.ok(rows[17].guidance.includes('appropriate accommodations'));
   assert.ok(rows[20].guidance.includes('instructional coach'));
   const activities = rows[12].content + '\n' + rows[13].content;
-  assert.equal((activities.match(/SESSION 1 — /g) || []).length, 8, 'Every timed activity appears exactly once across Pre-Lesson and Flow');
+  assert.equal((activities.match(/^.+ \(\d+ min\)$/gm) || []).length, 8, 'Every timed activity appears exactly once across Pre-Lesson and Flow');
+  assert.ok(!/SESSION/.test(activities), 'A single-session lesson shows no SESSION prefix on activity headings');
+  for (const a of lesson.activities) assert.ok(activities.includes(`${a.title} (${a.minutes} min)`));
   for (const a of lesson.activities) assert.ok(activities.includes(a.teacherActivity) && activities.includes(a.learnerActivity));
   assert.ok(activities.includes(lesson.indicators[0].wording));
   assert.ok(activities.includes('ANNOTATION'));
@@ -46,7 +48,10 @@ async function main() {
   const multiLesson = g.importCotResponse(multi, JSON.stringify(response(multi)));
   const multiRows = format.cotIlawRows(multiLesson);
   assert.ok(multiRows[13].guidance.includes('the selected sessions'));
-  for (const session of [2, 4]) assert.equal(((multiRows[12].content + multiRows[13].content).match(new RegExp(`SESSION ${session} — `, 'g')) || []).length, 8);
+  const multiText = multiRows[12].content + '\n' + multiRows[13].content;
+  assert.equal((multiText.match(/^.+ \(\d+ min\)$/gm) || []).length, 16, 'Both selected sessions keep all eight activities');
+  assert.ok(!/SESSION \d+ — /.test(multiText), 'Activity headings have no SESSION prefix');
+  for (const session of [2, 4]) assert.equal((multiText.match(new RegExp(`^SESSION ${session}$`, 'gm')) || []).length, 2, 'One divider per session in Pre-Lesson and in Flow');
   const seal = new Uint8Array(fs.readFileSync(path.join(__dirname, '../public/deped-seal.png')));
   const bytes = await format.buildIlawCotWord(lesson, seal);
   const zip = await JSZip.loadAsync(bytes);

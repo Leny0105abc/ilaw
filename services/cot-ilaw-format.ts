@@ -69,11 +69,24 @@ function annotations(p: CotLesson, activity: CotActivity) {
   });
 }
 
+// Activity headings carry no "SESSION n —" prefix. Only a lesson that covers several sessions
+// gets one short session divider line where each session starts.
+const activityHeading = (a: CotActivity) => `${a.title} (${a.minutes} min)`;
+const sessionDivider = (p: CotLesson, session: number) => `${isTagalogLearningArea(p.sourcePlan.area) ? "SESYON" : "SESSION"} ${session}`;
+function activityBlocks(p: CotLesson, activities: CotActivity[]) {
+  const multiple = p.selectedSessions.length > 1;
+  return activities.map((a, index) => [...(multiple && activities[index - 1]?.session !== a.session ? [sessionDivider(p, a.session)] : []), activityText(p, a)].join("\n"));
+}
+// Lines shown in bold that also start a new keep-together block in the PDF.
+export function ilawHeadingLines(p: CotLesson) {
+  return new Set([...p.activities.map(activityHeading), ...p.selectedSessions.map(session => sessionDivider(p, session))]);
+}
+
 function activityText(p: CotLesson, a: CotActivity) {
   const tagalog = isTagalogLearningArea(p.sourcePlan.area);
   const terms = tagalog ? { teacher: "Guro", learners: "Mga mag-aaral", question: "Gabay na tanong", responses: "Inaasahang tugon", followUp: "Kasunod na tanong", support: "Karagdagang gabay", core: "Pangunahing gawain", extension: "Karagdagang hamon", check: "Pagsusuri sa pagkatuto" } : { teacher: "Teacher", learners: "Learners", question: "Guide question", responses: "Anticipated responses", followUp: "Follow-up", support: "Support", core: "Core task", extension: "Extension", check: "Check for understanding" };
   return [
-    `${tagalog ? "SESYON" : "SESSION"} ${a.session} — ${a.title} (${a.minutes} min)`,
+    activityHeading(a),
     `${terms.teacher}: ${a.teacherActivity}`,
     `${terms.learners}: ${a.learnerActivity}`,
     ...a.questions.map(q => `${terms.question}: ${q.question}\n${terms.responses}: ${q.responses.join("; ")}\n${terms.followUp}: ${q.followUp}`),
@@ -105,8 +118,8 @@ export function cotIlawRows(p: CotLesson): CotIlawRow[] {
     { label: "Learning Objectives", guidance: "Write the smaller knowledge, skills, or tasks from the competency that the learners will work on and be able to show by the end of the sessions.", content: p.objectives.map((text, i) => `${i + 1}. ${text}`).join("\n") },
     { label: "Learner Context", guidance: "Write your observations of your learners, and how they have been performing or responding to learning experiences recently. Include strengths, interests, and possible barriers to learning.", content: p.learnerContext },
     { label: "Learning Experience.", section: true, content: learningExperienceDescription(area) },
-    { label: "Pre-Lesson", guidance: "Describe how you will help the learners get ready for the lesson.", content: [p.preLesson, ...pre.map(a => activityText(p, a))].filter(Boolean).join("\n\n") },
-    { label: "Flow", guidance: `Describe the activities that you can implement in ${p.selectedSessions.length === 1 ? "1 session" : "the selected sessions"} to meet the learning objectives.\n\nApply the Learning Design Principles by thinking about how to:\n-make the objectives clear for the learners\n-guide learners before letting them try the task on their own\n-check the state of the learners’ well-being, understanding, and mastery over the lesson\n-connect today’s new concepts to past competencies\n-encourage collaboration among learners\n-invite learners to reflect on why this matters to them\n-ensure inclusion for learners’ varied abilities, learning styles, and contexts`, content: [`${tagalog ? "Kabuuang oras ng lahat ng gawain" : "Timed Teaching Flow — total across Pre-Lesson and Flow"}: ${p.activities.reduce((sum, a) => sum + a.minutes, 0)} min`, ...flow.map(a => activityText(p, a))].join("\n\n") },
+    { label: "Pre-Lesson", guidance: "Describe how you will help the learners get ready for the lesson.", content: [p.preLesson, ...activityBlocks(p, pre)].filter(Boolean).join("\n\n") },
+    { label: "Flow", guidance: `Describe the activities that you can implement in ${p.selectedSessions.length === 1 ? "1 session" : "the selected sessions"} to meet the learning objectives.\n\nApply the Learning Design Principles by thinking about how to:\n-make the objectives clear for the learners\n-guide learners before letting them try the task on their own\n-check the state of the learners’ well-being, understanding, and mastery over the lesson\n-connect today’s new concepts to past competencies\n-encourage collaboration among learners\n-invite learners to reflect on why this matters to them\n-ensure inclusion for learners’ varied abilities, learning styles, and contexts`, content: [`${tagalog ? "Kabuuang oras ng lahat ng gawain" : "Timed Teaching Flow — total across Pre-Lesson and Flow"}: ${p.activities.reduce((sum, a) => sum + a.minutes, 0)} min`, ...activityBlocks(p, flow)].join("\n\n") },
     { label: "Learning Resources", guidance: "List down the learning resources that will help you reach your objectives. Ensure that they are available and inclusive.\nInclude options and alternatives in case of emergencies.", content: p.resources.join("\n") },
     { label: "Opportunities for integration", guidance: "Write down any possibilities to meaningfully integrate another learning area, special topic, or technology. Write N/A if none.", content: p.integration || "N/A" },
     { label: "ASSESSMENT.", section: true, content: assessmentDescription(area) },
@@ -134,10 +147,10 @@ export async function buildIlawCotWord(p: CotLesson, seal: Uint8Array | null = n
   const border = { style: BorderStyle.SINGLE, size: 4, color: "000000" }, none = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
   type ParaOptions = { bold?: boolean; italics?: boolean; underline?: boolean; center?: boolean; size?: number; gap?: boolean; after?: number };
   const paragraph = (text: string, { bold = false, italics = false, underline = false, center = false, size = 10, gap = false, after = 0 }: ParaOptions = {}) => new Paragraph({ alignment: center ? AlignmentType.CENTER : AlignmentType.LEFT, keepNext: bold || !text.trim(), spacing: { before: gap ? GAP_PT * 20 : 0, after, line: 240 }, children: [new TextRun({ text, bold, italics, ...(underline ? { underline: {} } : {}), size: Math.round(size * 2), font: "Bookman Old Style" })] });
-  const cellMargins = { top: cellPad.v, bottom: cellPad.v, left: cellPad.h, right: cellPad.h };
+  const cellMargins = { top: cellPad.v, bottom: cellPad.v, left: cellPad.h, right: cellPad.h }, headings = ilawHeadingLines(p);
   const rows = cotIlawRows(p).map(row => { const style = ilawLabelStyle(row, layout); return new TableRow({ children: [
     new TableCell({ width: { size: widths[0], type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: cellMargins, children: [paragraph(row.label + (row.guidance ? ":" : ""), { bold: style.bold, italics: style.italic, underline: style.underline, size: style.size }), ...(row.guidance ? ilawParagraphs(row.guidance).map(para => paragraph(para.text, { italics: style.guideItalic, size: style.guideSize, gap: para.gap })) : [])] }),
-    new TableCell({ width: { size: widths[1], type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: cellMargins, children: ilawParagraphs(row.content).map(para => paragraph(para.text, { bold: /^ANNOTATION|^(?:SESSION|SESYON) \d/.test(para.text), size: layout.body, gap: para.gap })) }),
+    new TableCell({ width: { size: widths[1], type: WidthType.DXA }, verticalAlign: VerticalAlign.TOP, margins: cellMargins, children: ilawParagraphs(row.content).map(para => paragraph(para.text, { bold: /^ANNOTATION/.test(para.text) || headings.has(para.text), size: layout.body, gap: para.gap })) }),
   ] }); });
   const labels = lessonPlanLabels(p.sourcePlan.area);
   const sign = (lines: string[]) => new TableCell({ borders: { top: none, bottom: none, left: none, right: none }, children: [paragraph(lines[0], { center: true, after: 60 }), paragraph("", { after: 60 }), paragraph(lines[1], { bold: true, center: true, after: 60 }), paragraph(lines[2], { center: true, after: 60 })] });
@@ -176,10 +189,13 @@ async function renderIlawCotPdf(p: CotLesson, logo: Uint8Array | null, layout: I
   pdf.setFont("times", "normal"); pdf.setFontSize(10);
   // Keep an activity with its explanation when it fits on a page. Invisible
   // internal horizontal borders preserve the reference's single Flow cell look.
-  const compact = (text: string) => text.replace(/\n\s*\n/g, "\n");
+  const compact = (text: string) => text.replace(/\n\s*\n/g, "\n"), headings = ilawHeadingLines(p);
+  const startsActivity = (block: string) => headings.has(block.split("\n")[0]);
   const pdfRows = cotIlawRows(p).flatMap(row => {
-    const parts = row.label === "Flow" || row.label === "Pre-Lesson" ? row.content.split(/\n\n(?=(?:SESSION|SESYON) \d)/) : [row.content];
-    if (parts.length > 1 && !/^(SESSION|SESYON) \d/.test(parts[0])) parts.splice(0, 2, `${parts[0]}\n\n${parts[1]}`);
+    const parts: string[] = [];
+    if (row.label === "Flow" || row.label === "Pre-Lesson") { for (const block of row.content.split("\n\n")) { if (!parts.length || startsActivity(block)) parts.push(block); else parts[parts.length - 1] += `\n\n${block}`; } }
+    else parts.push(row.content);
+    if (parts.length > 1 && !startsActivity(parts[0])) parts.splice(0, 2, `${parts[0]}\n\n${parts[1]}`);
     return parts.map((part, index) => {
       const lineWidth = { left: .4, right: .4, top: index === 0 ? .4 : 0, bottom: index === parts.length - 1 ? .4 : 0 };
       return [{ content: index === 0 ? `${row.label}${row.guidance ? ":\n" + compact(row.guidance) : ""}` : "", styles: { lineWidth } }, { content: compact(part), styles: { lineWidth } }];
@@ -198,6 +214,7 @@ async function renderIlawCotPdf(p: CotLesson, logo: Uint8Array | null, layout: I
 
 export function ilawCotPrintHtml(p: CotLesson) {
   const labels = lessonPlanLabels(p.sourcePlan.area), layout = ilawLayout(p);
-  const paras = (text: string) => ilawParagraphs(text).map(para => `<p class="${para.gap ? "gap" : ""}">${esc(para.text)}</p>`).join("");
+  const headings = ilawHeadingLines(p);
+  const paras = (text: string) => ilawParagraphs(text).map(para => `<p class="${para.gap ? "gap" : ""}">${headings.has(para.text) || /^ANNOTATION/.test(para.text) ? `<b>${esc(para.text)}</b>` : esc(para.text)}</p>`).join("");
   return `<!doctype html><html><head><meta charset="utf-8"><title>ILAW COT Lesson Plan</title><style>@page{size:A4 landscape;margin:10mm 5mm 5mm}body{font:${layout.body}pt "Bookman Old Style",Georgia,serif;color:#000}.heading{text-align:center}.heading img{width:54px;height:54px}.heading p{margin:2px;font-size:10pt}h1{font-size:12pt;margin:8px 0}p{line-height:1.2;margin:0 0 2pt}p.gap{margin-top:${GAP_PT}pt}table{border-collapse:collapse;width:100%;table-layout:fixed}th,td{border:.5pt solid #000;padding:2pt 3.6pt;vertical-align:top;overflow-wrap:anywhere}th{width:18.36%;text-align:left;font-style:normal;font-weight:normal}th small{display:block;font-style:normal;margin-top:2pt}th small.i{font-style:italic}th small p{margin:0 0 2pt}.signatures{display:grid;grid-template-columns:1fr 1fr;text-align:center;break-inside:avoid;margin-top:20px}.signatures strong{display:block;margin-top:30px}</style></head><body><header class="heading"><img src="/deped-seal.png" alt="Department of Education seal">${cotIlawHeader(p).map(line => `<p>${esc(line)}</p>`).join("")}<h1>LESSON PLAN</h1></header><table><tbody>${cotIlawRows(p).map(row => `<tr class="${row.section ? "section" : ""}"><th scope="row">${(() => { const st = ilawLabelStyle(row, layout); return `<span style="font-size:${st.size}pt;font-weight:${st.bold ? "bold" : "normal"};font-style:${st.italic ? "italic" : "normal"};text-decoration:${st.underline ? "underline" : "none"}">${esc(row.label + (row.guidance ? ":" : ""))}</span>${row.guidance ? `<small class="${st.guideItalic ? "i" : ""}" style="font-size:${st.guideSize}pt">${paras(row.guidance)}</small>` : ""}`; })()}</th><td>${paras(row.content)}</td></tr>`).join("")}</tbody></table><div class="signatures"><div>${esc(labels.preparedBy)}<strong>${esc(p.teacherName)}</strong>${esc(localizedPosition(p.position, p.sourcePlan.area))}</div><div>${esc(labels.reviewedBy)}<strong>${esc(p.observer || "____________________________")}</strong>${esc(p.observer === p.sourcePlan.profile.schoolHead ? localizedPosition(p.sourcePlan.profile.schoolHeadPosition, p.sourcePlan.area) : "Observer / Reviewer")}</div></div></body></html>`;
 }
